@@ -1,0 +1,36 @@
+{
+  "name": "mega-nice-sql",
+  "version": "1.0.0",
+  "description": "A mega nice data structure to work with SQL.",
+  "main": "lib/sql.js",
+  "types": "lib/sql.d.ts",
+  "files": [
+    "lib/**/*"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "@types/chai": "^4.2.4",
+    "@types/mocha": "^5.2.7",
+    "chai": "^4.2.0",
+    "mocha": "^6.2.2",
+    "ts-node": "^8.4.1",
+    "typescript": "^3.7.2"
+  },
+  "scripts": {
+    "test": "mocha -r ts-node/register test/**/*.spec.ts",
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/c0deritter/mega-nice-sql.git"
+  },
+  "keywords": [
+    ""
+  ],
+  "author": "Coderitter GmbH",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/c0deritter/mega-nice-sql/issues"
+  },
+  "homepage": "https://github.com/c0deritter/mega-nice-sql#readme"
+}
