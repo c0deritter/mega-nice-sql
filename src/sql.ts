@@ -5,20 +5,58 @@ export default class {
     query.select(select)
     return query
   }
+
+  static insertInto(insertInto: string): Query {
+    let query = new Query()
+    query.insertInto(insertInto)
+    return query
+  }
+
+  static update(update: string): Query {
+    let query = new Query()
+    query.update(update)
+    return query
+  }
+
+  static deleteFrom(deleteFrom: string): Query {
+    let query = new Query()
+    query.deleteFrom(deleteFrom)
+    return query
+  }
 }
 
 export class Query {
 
   private _selects: string[] = []
+  private _insertInto?: string
+  private _values: Value[] = []
+  private _update?: string
+  private _deleteFrom?: string
   private _froms: string[] = []
   private _joins: Join[] = []
   private _wheres: Where[] = []
   private _orderBys: OrderBy[] = []
   private _limit?: number
   private _offset?: number
+  private _returnings: string[] = []
   
   select(select: string): Query {
     this._selects.push(select)
+    return this
+  }
+
+  insertInto(insertInto?: string): Query {
+    this._insertInto = insertInto
+    return this
+  }
+
+  update(update: string): Query {
+    this._update = update
+    return this
+  }
+
+  deleteFrom(deleteFrom: string): Query {
+    this._deleteFrom = deleteFrom
     return this
   }
 
@@ -29,6 +67,16 @@ export class Query {
 
   join(typeOrTable: string, tableOrOn: string, on?: string): Query {
     this._joins.push(new Join(typeOrTable, tableOrOn, on))
+    return this
+  }
+
+  value(column: string, value: any): Query {
+    this._values.push(new Value(column, value))
+    return this
+  }
+
+  set(column: string, value: any): Query {
+    this._values.push(new Value(column, value))
     return this
   }
 
@@ -53,6 +101,11 @@ export class Query {
     return this
   }
 
+  returning(returning: string): Query {
+    this._returnings.push(returning)
+    return this
+  }
+
   sql(): string {
     let sql = ""
     let varIndex = 1
@@ -71,6 +124,18 @@ export class Query {
       }
     }
 
+    if (this._insertInto != undefined) {
+      sql += "INSERT INTO " + this._insertInto
+    }
+
+    if (this._update != undefined) {
+      sql += "UPDATE " + this._update
+    }
+
+    if (this._deleteFrom != undefined) {
+      sql += "DELETE FROM " + this._deleteFrom
+    }
+
     if (this._froms.length > 0) {
       sql += " FROM "
       let firstFrom = true
@@ -87,6 +152,49 @@ export class Query {
 
     for (let join of this._joins) {
       sql += " " + join.sql()
+    }
+
+    if (this._insertInto != undefined && this._values.length > 0) {
+      sql += " ("
+      let firstValue = true
+
+      for (let value of this._values) {
+        if (! firstValue) {
+          sql += ", "
+        }
+        
+        sql += value.column
+        firstValue = false
+      }
+
+      sql += ") VALUES ("
+
+      for (let value of this._values) {
+        if (! firstValue) {
+          sql += ", "
+        }
+        
+        sql += "$" + varIndex
+        varIndex++
+        firstValue = false
+      }
+    }
+
+    if (this._update != undefined && this._values.length > 0) {
+      sql += " SET "
+      let firstValue = true
+
+      for (let value of this._values) {
+        if (! firstValue) {
+          sql += ", "
+        }
+        
+        sql += value.column + " = $" + varIndex
+        varIndex++
+        firstValue = false
+      }
+
+      sql += ")"
     }
 
     if (this._wheres.length > 0) {
@@ -128,6 +236,20 @@ export class Query {
       sql += " OFFSET $" + varIndex
       varIndex++
     }
+
+    if (this._returnings.length > 0) {
+      sql += " RETURNING "
+      let firstReturning = true
+
+      for (let returning of this._returnings) {
+        if (! firstReturning) {
+          sql += ", "
+        }
+
+        sql += returning
+        firstReturning = false
+      }
+    }
     
     if (sql.length > 0) {
       sql += ";"
@@ -138,6 +260,10 @@ export class Query {
 
   values(): any[] {
     let values: any[] = []
+
+    for (let value of this._values) {
+      values.push(value.value)
+    }
 
     for (let where of this._wheres) {
       if (where.operator == "IN") {
@@ -298,6 +424,16 @@ export class Where {
     else {
       return sql
     }
+  }
+}
+
+export class Value {
+  column: string
+  value: any
+
+  constructor(column: string, value: any) {
+    this.column = column
+    this.value = value
   }
 }
 
