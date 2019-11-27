@@ -196,8 +196,6 @@ export class Query {
         parameterIndex++
         firstValue = false
       }
-
-      sql += ")"
     }
 
     if (this._wheres.length > 0) {
