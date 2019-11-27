@@ -169,6 +169,7 @@ export class Query {
 
       sql += ") VALUES ("
 
+      firstValue = true
       for (let value of this._values) {
         if (! firstValue) {
           sql += ", "
