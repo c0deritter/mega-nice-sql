@@ -179,6 +179,8 @@ export class Query {
         parameterIndex++
         firstValue = false
       }
+
+      sql += ")"
     }
 
     if (this._update != undefined && this._values.length > 0) {
