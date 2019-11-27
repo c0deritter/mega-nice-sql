@@ -39,7 +39,7 @@ export class Query {
   private _limit?: number
   private _offset?: number
   private _returnings: string[] = []
-  
+
   select(select: string): Query {
     this._selects.push(select)
     return this
@@ -106,9 +106,9 @@ export class Query {
     return this
   }
 
-  sql(): string {
+  sql(db: string = 'mysql'): string {
     let sql = ""
-    let varIndex = 1
+    let parameterIndex = 1
 
     if (this._selects.length > 0) {
       sql += "SELECT "
@@ -174,8 +174,8 @@ export class Query {
           sql += ", "
         }
         
-        sql += "$" + varIndex
-        varIndex++
+        sql += getParameterQueryString(db, parameterIndex)
+        parameterIndex++
         firstValue = false
       }
     }
@@ -189,8 +189,8 @@ export class Query {
           sql += ", "
         }
         
-        sql += value.column + " = $" + varIndex
-        varIndex++
+        sql += value.column + " = " + getParameterQueryString(db, parameterIndex)
+        parameterIndex++
         firstValue = false
       }
 
@@ -206,8 +206,8 @@ export class Query {
           sql += " AND "
         }
 
-        let whereResult = <{ sql: string, varIndex: number }> where.sql(varIndex)
-        varIndex = whereResult.varIndex
+        let whereResult = <{ sql: string, varIndex: number }> where.sql(db, parameterIndex)
+        parameterIndex = whereResult.varIndex
         sql += whereResult.sql
         firstWhere = false
       }
@@ -228,13 +228,13 @@ export class Query {
     }
 
     if (this._limit != undefined) {
-      sql += " LIMIT $" + varIndex
-      varIndex++
+      sql += " LIMIT " + getParameterQueryString(db, parameterIndex)
+      parameterIndex++
     }
     
     if (this._offset != undefined) {
-      sql += " OFFSET $" + varIndex
-      varIndex++
+      sql += " OFFSET " + getParameterQueryString(db, parameterIndex)
+      parameterIndex++
     }
 
     if (this._returnings.length > 0) {
@@ -324,6 +324,7 @@ export class Where {
   private static readonly notNullRegExp = /(\w+\bis\b\w+\bnot\b\w+\bnull\b\w*)/i
   private static readonly inRegExp = /(\w+\bin\b\w*)/i
 
+  mode: string = 'mysql'
   column: string
   operator: string = "="
   value: any
@@ -377,11 +378,11 @@ export class Where {
     }
   }
 
-  sql(varIndex?: number): string | { sql: string, varIndex: number } {
+  sql(db: string = 'mysql', parameterIndex?: number): string | { sql: string, varIndex: number } {
     let externalVarIndex = true
 
-    if (varIndex == undefined) {
-      varIndex = 1
+    if (parameterIndex == undefined) {
+      parameterIndex = 1
       externalVarIndex = false
     }
 
@@ -398,27 +399,27 @@ export class Where {
             sql += ", "
           }
 
-          sql += "$" + varIndex
-          varIndex++
+          sql += getParameterQueryString(db, parameterIndex)
+          parameterIndex++
           firstValue = false
         }
       }
       else {
-        sql += "$" + varIndex
-        varIndex++
+        sql += getParameterQueryString(db, parameterIndex)
+        parameterIndex++
       }
 
       sql += ")"
     }
     else if (! this.operator.endsWith("NULL")) {
-      sql += " $" + varIndex
-      varIndex++
+      sql += " " + getParameterQueryString(db, parameterIndex)
+      parameterIndex++
     }
 
     if (externalVarIndex) {
       return {
         sql: sql,
-        varIndex: varIndex
+        varIndex: parameterIndex
       }
     }
     else {
@@ -462,4 +463,16 @@ export class OrderBy {
 
     return this.column
   }
+}
+
+function getParameterQueryString(db: string, parameterIndex: number = 1): string {
+  if (db == 'mysql' || db == 'mariadb') {
+    return '?'
+  }
+  
+  if (db == 'postgres') {
+    return '$' + parameterIndex
+  }
+
+  return ''
 }
