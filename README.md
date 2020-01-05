@@ -82,6 +82,7 @@ sql.select('*').from('table').where('id IS nOT nulL') // will be converted to up
 sql.select('*').from('table').where('id', 'NULL')
 sql.select('*').from('table').where('id', 'NOT NULL')
 sql.select('*').from('table').where('id', null)
+sql.select('*').from('table').where('id', !null) // joke
 ```
 
 It will convert an array to a appropriate SQL representation.
