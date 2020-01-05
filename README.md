@@ -24,7 +24,7 @@ sql.deleteFrom('table').where('id', 1)
 ```typescript
 let query = sql.select('*').from('table').where('id', 1)
 
-query.sql() == 'SELECT * FROM table'
+query.sql() == 'SELECT * FROM table WHERE id = 1'
 query.values() == [ 1 ]
 ```
 
