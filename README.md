@@ -85,15 +85,15 @@ sql.select('*').from('table').where('id', null)
 sql.select('*').from('table').where('id', !null) // joke
 ```
 
-It will convert an array to a appropriate SQL representation.
+It will convert an array to an appropriate SQL representation.
 
 ```typescript
 sql.select('*').from('table').where('id IN', [ 1, 2, 3 ])
 sql.select('*').from('table').where('id', 'IN', [ 1, 2, 3 ])
 sql.select('*').from('table').where('id', [ 1, 2, 3 ])
 
-query.sql() == 'SELECT * FROM table WHERE id IN [?, ?, ?]'
-query.sql('postgres') == 'SELECT * FROM table WHERE id IN [$1, $2, $3]'
+query.sql() == 'SELECT * FROM table WHERE id IN (?, ?, ?)'
+query.sql('postgres') == 'SELECT * FROM table WHERE id IN ($1, $2, $3)'
 
 query.values() == [ 1, 2, 3 ]
 ```
@@ -104,7 +104,7 @@ Various where statements are connected through the `AND` operator.
 let query = sql.select('*').from('table').where('id', [ 1, 2, 3]).where('name', 'LIKE', '%ert%')
 
 query.sql() == 'SELECT * FROM table WHERE id IN [?, ?, ?] AND name LIKE \'%ert\''
-query.sql('postgres') == 'SELECT * FROM table WHERE id IN [$1, $2, $3] AND name LIKE \'%ert\''
+query.sql('postgres') == 'SELECT * FROM table WHERE id IN ($1, $2, $3) AND name LIKE \'%ert\''
 
 query.values() == [ 1, 2, 3, '%ert%' ]
 ```
