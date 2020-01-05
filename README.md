@@ -69,6 +69,10 @@ query.sql('postgres') == 'SELECT * FROM table WHERE id > $1'
 query.values() == [ 1 ]
 ```
 
+```typescript
+sql.select('*').from('table').where('name', 'LIKE', '%ert%')
+```
+
 It can handle `null` values.
 
 ```typescript
@@ -91,10 +95,6 @@ query.sql() == 'SELECT * FROM table WHERE id IN [?, ?, ?]'
 query.sql('postgres') == 'SELECT * FROM table WHERE id IN [$1, $2, $3]'
 
 query.values() == [ 1, 2, 3 ]
-```
-
-```typescript
-sql.select('*').from('table').where('name', 'LIKE', '%ert%')
 ```
 
 Various where statements are connected through the `AND` operator.
