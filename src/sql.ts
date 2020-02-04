@@ -405,10 +405,6 @@ export class Where {
           firstValue = false
         }
       }
-      else {
-        sql += getParameterQueryString(db, parameterIndex)
-        parameterIndex++
-      }
 
       sql += ")"
     }
