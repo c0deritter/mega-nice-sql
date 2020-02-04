@@ -182,6 +182,9 @@ export class Query {
 
       sql += ")"
     }
+    else {
+      sql += " DEFAULT VALUES"
+    }
 
     if (this._update != undefined && this._values.length > 0) {
       sql += " SET "
