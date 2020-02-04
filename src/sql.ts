@@ -182,7 +182,7 @@ export class Query {
 
       sql += ")"
     }
-    else {
+    else if (this._insertInto != undefined) {
       sql += " DEFAULT VALUES"
     }
 

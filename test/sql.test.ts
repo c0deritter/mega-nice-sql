@@ -21,6 +21,20 @@ describe('sql', function() {
         expect(sqlString).to.equal('INSERT INTO table DEFAULT VALUES;')
       })    
     })
+
+    describe('SELECT', function() {
+      it('should create a select SQL statement', function() {
+        let query = sql.select('*').from('table').where('a', 'a').where('b', '>', 'b')
+        let sqlString = query.sql()
+        expect(sqlString).to.equal('SELECT * FROM table WHERE a = ? AND b > ?;')
+      })
+
+      it('should create a select SQL statement without where criteria', function() {
+        let query = sql.select('*').from('table')
+        let sqlString = query.sql()
+        expect(sqlString).to.equal('SELECT * FROM table;')
+      })
+    })
   })
 
   describe('PostgreSQL', function() {
@@ -40,6 +54,20 @@ describe('sql', function() {
         let sqlString = query.sql('postgres')
         expect(sqlString).to.equal('INSERT INTO table DEFAULT VALUES;')
       })    
+    })
+
+    describe('SELECT', function() {
+      it('should create a select SQL statement', function() {
+        let query = sql.select('*').from('table').where('a', 'a').where('b', '>', 'b')
+        let sqlString = query.sql('postgres')
+        expect(sqlString).to.equal('SELECT * FROM table WHERE a = $1 AND b > $2;')
+      })
+
+      it('should create a select SQL statement without where criteria', function() {
+        let query = sql.select('*').from('table')
+        let sqlString = query.sql('postgres')
+        expect(sqlString).to.equal('SELECT * FROM table;')
+      })
     })
   })
 })
