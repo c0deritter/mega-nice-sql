@@ -107,16 +107,16 @@ export class Query {
   }
 
   sql(db: string = 'mysql'): string {
-    let sql = ""
+    let sql = ''
     let parameterIndex = 1
 
     if (this._selects.length > 0) {
-      sql += "SELECT "
+      sql += 'SELECT '
       let firstSelect = true
 
       for (let select of this._selects) {
         if (! firstSelect) {
-          sql += ", "
+          sql += ', '
         }
 
         sql += select
@@ -125,24 +125,24 @@ export class Query {
     }
 
     if (this._insertInto != undefined) {
-      sql += "INSERT INTO " + this._insertInto
+      sql += 'INSERT INTO ' + this._insertInto
     }
 
     if (this._update != undefined) {
-      sql += "UPDATE " + this._update
+      sql += 'UPDATE ' + this._update
     }
 
     if (this._deleteFrom != undefined) {
-      sql += "DELETE FROM " + this._deleteFrom
+      sql += 'DELETE FROM ' + this._deleteFrom
     }
 
     if (this._froms.length > 0) {
-      sql += " FROM "
+      sql += ' FROM '
       let firstFrom = true
 
       for (let from of this._froms) {
         if (! firstFrom) {
-          sql += ", "
+          sql += ', '
         }
 
         sql += from
@@ -151,28 +151,28 @@ export class Query {
     }
 
     for (let join of this._joins) {
-      sql += " " + join.sql()
+      sql += ' ' + join.sql()
     }
 
     if (this._insertInto != undefined && this._values.length > 0) {
-      sql += " ("
+      sql += ' ('
       let firstValue = true
 
       for (let value of this._values) {
         if (! firstValue) {
-          sql += ", "
+          sql += ', '
         }
         
         sql += value.column
         firstValue = false
       }
 
-      sql += ") VALUES ("
+      sql += ') VALUES ('
 
       firstValue = true
       for (let value of this._values) {
         if (! firstValue) {
-          sql += ", "
+          sql += ', '
         }
         
         sql += getParameterQueryString(db, parameterIndex)
@@ -180,34 +180,34 @@ export class Query {
         firstValue = false
       }
 
-      sql += ")"
+      sql += ')'
     }
     else if (this._insertInto != undefined) {
-      sql += " DEFAULT VALUES"
+      sql += ' DEFAULT VALUES'
     }
 
     if (this._update != undefined && this._values.length > 0) {
-      sql += " SET "
+      sql += ' SET '
       let firstValue = true
 
       for (let value of this._values) {
         if (! firstValue) {
-          sql += ", "
+          sql += ', '
         }
         
-        sql += value.column + " = " + getParameterQueryString(db, parameterIndex)
+        sql += value.column + ' = ' + getParameterQueryString(db, parameterIndex)
         parameterIndex++
         firstValue = false
       }
     }
 
     if (this._wheres.length > 0) {
-      sql += " WHERE "
+      sql += ' WHERE '
 
       let firstWhere = true
       for (let where of this._wheres) {
         if (! firstWhere) {
-          sql += " AND "
+          sql += ' AND '
         }
 
         let whereResult = <{ sql: string, varIndex: number }> where.sql(db, parameterIndex)
@@ -218,12 +218,12 @@ export class Query {
     }
 
     if (this._orderBys.length > 0) {
-      sql += " ORDER BY "
+      sql += ' ORDER BY '
       let firstOrderBy = true
 
       for (let orderBy of this._orderBys) {
         if (! firstOrderBy) {
-          sql += ", "
+          sql += ', '
         }
 
         sql += orderBy.sql()
@@ -232,22 +232,22 @@ export class Query {
     }
 
     if (this._limit != undefined) {
-      sql += " LIMIT " + getParameterQueryString(db, parameterIndex)
+      sql += ' LIMIT ' + getParameterQueryString(db, parameterIndex)
       parameterIndex++
     }
     
     if (this._offset != undefined) {
-      sql += " OFFSET " + getParameterQueryString(db, parameterIndex)
+      sql += ' OFFSET ' + getParameterQueryString(db, parameterIndex)
       parameterIndex++
     }
 
     if (this._returnings.length > 0) {
-      sql += " RETURNING "
+      sql += ' RETURNING '
       let firstReturning = true
 
       for (let returning of this._returnings) {
         if (! firstReturning) {
-          sql += ", "
+          sql += ', '
         }
 
         sql += returning
@@ -256,7 +256,7 @@ export class Query {
     }
     
     if (sql.length > 0) {
-      sql += ";"
+      sql += ';'
     }
 
     return sql
@@ -270,7 +270,7 @@ export class Query {
     }
 
     for (let where of this._wheres) {
-      if (where.operator == "IN") {
+      if (where.operator == 'IN') {
         if (where.value instanceof Array) {
           for (let value of where.value) {
             values.push(value)
@@ -280,7 +280,7 @@ export class Query {
           values.push(where.value)
         }
       }
-      else if (! where.operator.endsWith("NULL")) {
+      else if (! where.operator.endsWith('NULL')) {
         values.push(where.value)
       }
     }
@@ -298,15 +298,15 @@ export class Query {
 }
 
 export class Join {
-  type: string = ""
+  type: string = ''
   table: string
   on?: string
 
   constructor(typeOrTable: string, tableOrOn: string, on?: string) {
     let upperCase = typeOrTable.trim().toUpperCase()
 
-    if (upperCase.startsWith("INNER") || upperCase.startsWith("LEFT") || 
-        upperCase.startsWith("RIGHT") || upperCase.startsWith("FULL")) {
+    if (upperCase.startsWith('INNER') || upperCase.startsWith('LEFT') || 
+        upperCase.startsWith('RIGHT') || upperCase.startsWith('FULL')) {
       this.type = upperCase
       this.table = tableOrOn
       this.on = on
@@ -318,61 +318,77 @@ export class Join {
   }
 
   sql(): string {
-    return this.type + " JOIN " + this.table + " ON " + this.on
+    return this.type + ' JOIN ' + this.table + ' ON ' + this.on
   }
 }
 
 export class Where {
 
-  private static readonly nullRegExp = /(\w+\bis\b\w+\bnull\b\w*)/i
-  private static readonly notNullRegExp = /(\w+\bis\b\w+\bnot\b\w+\bnull\b\w*)/i
-  private static readonly inRegExp = /(\w+\bin\b\w*)/i
+  private static readonly nullRegExp = /(\s*\bis\b\s+\bnull\b\s*)/i
+  private static readonly notNullRegExp = /(\s*\bis\b\s+\bnot\b\s+\bnull\b\s*)/i
+  private static readonly inRegExp = /(\s*\bin\b\s*)/i
 
   mode: string = 'mysql'
   column: string
-  operator: string = "="
+  operator: string = '='
   value: any
   
   constructor(where: string, valueOrOperator?: any, value?: any) {
     if (where.search(Where.nullRegExp) > -1) {
-      this.column = where.replace(Where.nullRegExp, "")
-      this.operator = "IS NULL"
+      this.column = where.replace(Where.nullRegExp, '')
+      this.operator = 'IS'
+      this.value = 'NULL'
     }
     else if (where.search(Where.notNullRegExp) > -1) {
-      this.column = where.replace(Where.notNullRegExp, "")
-      this.operator = "IS NOT NULL"
+      this.column = where.replace(Where.notNullRegExp, '')
+      this.operator = 'IS NOT'
+      this.value = 'NULL'
     }
     else if (where.search(Where.inRegExp) > -1) {
-      this.column = where.replace(Where.inRegExp, "")
-      this.operator = "IN"
+      this.column = where.replace(Where.inRegExp, '')
+      this.operator = 'IN'
     }
     else {
       this.column = where
     }
-    
+
     if (valueOrOperator !== undefined) {
       // 4 because LIKE is the longest supported operator
-      if (typeof valueOrOperator == 'string' && valueOrOperator.length <= 4) {
-        let upperCase = valueOrOperator.trim().toUpperCase()
+      if (typeof valueOrOperator == 'string') {
+        let trimmed = valueOrOperator.trim()
 
-        if (upperCase == "=" || upperCase == ">" || upperCase == "<" || upperCase == ">=" ||
-            upperCase == "<=" || upperCase == "<>" || upperCase == "IN" || upperCase == "LIKE") {
-          this.operator = upperCase
+        if (trimmed.search(Where.nullRegExp) == 0) {
+          this.operator = 'IS'
+          this.value = 'NULL'
+        }
+        else if (trimmed.search(Where.notNullRegExp) == 0) {
+          this.operator = 'IS NOT'
+          this.value = 'NULL'
         }
         else {
-          this.operator = "="
-          this.value = valueOrOperator
+          let upperCase = valueOrOperator.trim().toUpperCase()
+
+          if (upperCase == '=' || upperCase == '>' || upperCase == '<' || upperCase == '>=' ||
+              upperCase == '<=' || upperCase == '<>' || upperCase == '!=' || upperCase == 'IN' || 
+              upperCase == 'IS' || upperCase == 'LIKE') {
+            this.operator = upperCase
+          }
+          else {
+            this.operator = '='
+            this.value = valueOrOperator
+          }
         }
       }
       else if (valueOrOperator === null) {
-        this.operator = "IS NULL"
+        this.operator = 'IS'
+        this.value = 'NULL'
       }
       else if (valueOrOperator instanceof Array) {
-        this.operator = "IN"
+        this.operator = 'IN'
         this.value = valueOrOperator
       }
       else {
-        this.operator = "="
+        this.operator = '='
         this.value = valueOrOperator
       }
     }
@@ -390,17 +406,17 @@ export class Where {
       externalVarIndex = false
     }
 
-    let sql = this.column + " " + this.operator
+    let sql = this.column + ' ' + this.operator
 
-    if (this.operator == "IN") {
-      sql += " ("
+    if (this.operator == 'IN') {
+      sql += ' ('
 
       if (this.value instanceof Array && this.value.length > 0) {
 
         let firstValue = true        
         for (let value of this.value) {
           if (! firstValue) {
-            sql += ", "
+            sql += ', '
           }
 
           sql += getParameterQueryString(db, parameterIndex)
@@ -409,10 +425,13 @@ export class Where {
         }
       }
 
-      sql += ")"
+      sql += ')'
     }
-    else if (! this.operator.endsWith("NULL")) {
-      sql += " " + getParameterQueryString(db, parameterIndex)
+    else if (this.value === 'NULL') {
+      sql += ' ' + this.value
+    }
+    else {
+      sql += ' ' + getParameterQueryString(db, parameterIndex)
       parameterIndex++
     }
 
@@ -450,14 +469,14 @@ export class OrderBy {
 
   sql(): string {
     if (this.direction != undefined) {
-      if (this.direction.toLowerCase() == "asc") {
-        return this.column + " ASC"
+      if (this.direction.toLowerCase() == 'asc') {
+        return this.column + ' ASC'
       }
-      else if (this.direction.toLowerCase() == "desc") {
-        return this.column + " DESC"
+      else if (this.direction.toLowerCase() == 'desc') {
+        return this.column + ' DESC'
       }
       else {
-        return this.column + " " + this.direction
+        return this.column + ' ' + this.direction
       }
     }
 
