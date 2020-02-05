@@ -280,7 +280,7 @@ export class Query {
           values.push(where.value)
         }
       }
-      else if (! where.operator.endsWith('NULL')) {
+      else if (! where.isValueSqlKeyword()) {
         values.push(where.value)
       }
     }
@@ -396,6 +396,10 @@ export class Where {
     if (value != undefined) {
       this.value = value
     }
+  }
+
+  isValueSqlKeyword(): boolean {
+    return (this.operator == 'IS' || this.operator == 'IS NOT') && this.value == 'NULL'
   }
 
   sql(db: string = 'mysql', parameterIndex?: number): string | { sql: string, varIndex: number } {
