@@ -370,7 +370,7 @@ export class Where {
 
           if (upperCase == '=' || upperCase == '>' || upperCase == '<' || upperCase == '>=' ||
               upperCase == '<=' || upperCase == '<>' || upperCase == '!=' || upperCase == 'IN' || 
-              upperCase == 'IS' || upperCase == 'LIKE') {
+              upperCase == 'IS' || upperCase == 'IS NOT' || upperCase == 'LIKE') {
             this.operator = upperCase
           }
           else {

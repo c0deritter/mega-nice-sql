@@ -52,6 +52,24 @@ describe('Where', function() {
       expect(sql).to.equal('a IS NULL')
     })
 
+    it('should render a IS NOT NULL when it is given in the where parameter', function() {
+      let where = new Where('a IS NOT NULL')
+      let sql = where.sql()
+      expect(sql).to.equal('a IS NOT NULL')
+    })
+
+    it('should render a IS NOT NULL when it is given in the value parameter', function() {
+      let where = new Where('a', 'IS NOT NULL')
+      let sql = where.sql()
+      expect(sql).to.equal('a IS NOT NULL')
+    })
+
+    it('should render a IS NOT NULL when it is given in the operator and value parameter', function() {
+      let where = new Where('a', 'IS NOT', 'NULL')
+      let sql = where.sql()
+      expect(sql).to.equal('a IS NOT NULL')
+    })
+
     it('should render an IN operator', function() {
       let where = new Where('a', 'IN', [1, 2, 3, 4])
       let sql = where.sql()
@@ -112,6 +130,24 @@ describe('Where', function() {
       let where = new Where('a', 'IS', 'NULL')
       let sql = where.sql('postgres')
       expect(sql).to.equal('a IS NULL')
+    })
+
+    it('should render a IS NOT NULL when it is given in the where parameter', function() {
+      let where = new Where('a IS NOT NULL')
+      let sql = where.sql('postgres')
+      expect(sql).to.equal('a IS NOT NULL')
+    })
+
+    it('should render a IS NOT NULL when it is given in the value parameter', function() {
+      let where = new Where('a', 'IS NOT NULL')
+      let sql = where.sql('postgres')
+      expect(sql).to.equal('a IS NOT NULL')
+    })
+
+    it('should render a IS NOT NULL when it is given in the operator and value parameter', function() {
+      let where = new Where('a', 'IS NOT', 'NULL')
+      let sql = where.sql('postgres')
+      expect(sql).to.equal('a IS NOT NULL')
     })
 
     it('should render an IN operator', function() {
