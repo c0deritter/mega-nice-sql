@@ -334,6 +334,10 @@ export class Where {
   value: any
   
   constructor(where: string, valueOrOperator?: any, value?: any) {
+    where = where != undefined && typeof where == 'string' ? where.trim() : where
+    valueOrOperator = valueOrOperator != undefined && typeof valueOrOperator == 'string' ? valueOrOperator.trim() : valueOrOperator
+    value = value != undefined && typeof value == 'string' ? value.trim() : value
+
     if (where.search(Where.nullRegExp) > -1) {
       this.column = where.replace(Where.nullRegExp, '')
       this.operator = 'IS'
@@ -355,20 +359,27 @@ export class Where {
     if (valueOrOperator !== undefined) {
       // 4 because LIKE is the longest supported operator
       if (typeof valueOrOperator == 'string') {
-        let trimmed = valueOrOperator.trim()
-
-        if (trimmed.search(Where.nullRegExp) == 0) {
+        if (valueOrOperator.search(Where.nullRegExp) == 0) {
           this.operator = 'IS'
           this.value = 'NULL'
         }
-        else if (trimmed.search(Where.notNullRegExp) == 0) {
+        else if (valueOrOperator.search(Where.notNullRegExp) == 0) {
           this.operator = 'IS NOT'
           this.value = 'NULL'
         }
         else {
-          let upperCase = valueOrOperator.trim().toUpperCase()
+          let upperCase = valueOrOperator.toUpperCase()
 
-          if (upperCase == '=' || upperCase == '>' || upperCase == '<' || upperCase == '>=' ||
+          if (upperCase == '=' && value !== undefined && (value === null || value.toUpperCase() == 'NULL')) {
+            this.operator = 'IS'
+          }
+          else if (upperCase == '<>' && value !== undefined && (value === null || value.toUpperCase() == 'NULL')) {
+            this.operator = 'IS NOT'
+          }
+          else if (upperCase == '!=' && value !== undefined && (value === null || value.toUpperCase() == 'NULL')) {
+            this.operator = 'IS NOT'
+          }
+          else if (upperCase == '=' || upperCase == '>' || upperCase == '<' || upperCase == '>=' ||
               upperCase == '<=' || upperCase == '<>' || upperCase == '!=' || upperCase == 'IN' || 
               upperCase == 'IS' || upperCase == 'IS NOT' || upperCase == 'LIKE' || upperCase == 'ILIKE') {
             this.operator = upperCase
@@ -393,8 +404,16 @@ export class Where {
       }
     }
 
-    if (value != undefined) {
-      this.value = value
+    if (value === null) {
+      this.value = 'NULL'
+    }
+    else if (value !== undefined) {
+      if (typeof value == 'string' && value.toUpperCase() == 'NULL') {
+        this.value = 'NULL'
+      }
+      else {
+        this.value = value
+      }
     }
   }
 
