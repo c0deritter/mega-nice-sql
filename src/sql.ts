@@ -370,13 +370,13 @@ export class Where {
         else {
           let upperCase = valueOrOperator.toUpperCase()
 
-          if (upperCase == '=' && value !== undefined && (value === null || value.toUpperCase() == 'NULL')) {
+          if (upperCase == '=' && (value === null || typeof value == 'string' && value.toUpperCase() == 'NULL')) {
             this.operator = 'IS'
           }
-          else if (upperCase == '<>' && value !== undefined && (value === null || value.toUpperCase() == 'NULL')) {
+          else if (upperCase == '<>' && (value === null || typeof value == 'string' && value.toUpperCase() == 'NULL')) {
             this.operator = 'IS NOT'
           }
-          else if (upperCase == '!=' && value !== undefined && (value === null || value.toUpperCase() == 'NULL')) {
+          else if (upperCase == '!=' && (value === null || typeof value == 'string' && value.toUpperCase() == 'NULL')) {
             this.operator = 'IS NOT'
           }
           else if (upperCase == '=' || upperCase == '>' || upperCase == '<' || upperCase == '>=' ||
