@@ -1,3 +1,5 @@
+// https://ronsavage.github.io/SQL/sql-92.bnf.html
+
 export default class {
 
   static select(select: string): Query {
@@ -210,8 +212,8 @@ export class Query {
           sql += ' AND '
         }
 
-        let whereResult = <{ sql: string, varIndex: number }> where.sql(db, parameterIndex)
-        parameterIndex = whereResult.varIndex
+        let whereResult = <{ sql: string, parameterIndex: number }> where.sql(db, parameterIndex)
+        parameterIndex = whereResult.parameterIndex
         sql += whereResult.sql
         firstWhere = false
       }
@@ -270,19 +272,7 @@ export class Query {
     }
 
     for (let where of this._wheres) {
-      if (where.operator == 'IN') {
-        if (where.value instanceof Array) {
-          for (let value of where.value) {
-            values.push(value)
-          }
-        }
-        else {
-          values.push(where.value)
-        }
-      }
-      else if (! where.isValueSqlKeyword()) {
-        values.push(where.value)
-      }
+      values.push(...where.values())
     }
 
     if (this._limit != undefined) {
@@ -324,148 +314,398 @@ export class Join {
 
 export class Where {
 
-  private static readonly nullRegExp = /(\s*\bis\b\s+\bnull\b\s*)/i
-  private static readonly notNullRegExp = /(\s*\bis\b\s+\bnot\b\s+\bnull\b\s*)/i
-  private static readonly inRegExp = /(\s*\bin\b\s*)/i
-
   mode: string = 'mysql'
-  column: string
-  operator: string = '='
-  value: any
+  predicate: Predicate
+
+  constructor(where: string)
+  constructor(column: string, value: any)
+  constructor(column: string, operator: string, value: any)
+  constructor(column: string, expression: string)
   
-  constructor(where: string, valueOrOperator?: any, value?: any) {
-    where = where != undefined && typeof where == 'string' ? where.trim() : where
-    valueOrOperator = valueOrOperator != undefined && typeof valueOrOperator == 'string' ? valueOrOperator.trim() : valueOrOperator
-    value = value != undefined && typeof value == 'string' ? value.trim() : value
+  constructor(whereOrColumn: string, valueOrOperatorOrExpression?: any, value?: any) {
+    // test if we got the second parameter
+    if (valueOrOperatorOrExpression !== undefined) {
+      let column
 
-    if (where.search(Where.nullRegExp) > -1) {
-      this.column = where.replace(Where.nullRegExp, '')
-      this.operator = 'IS'
-      this.value = 'NULL'
-    }
-    else if (where.search(Where.notNullRegExp) > -1) {
-      this.column = where.replace(Where.notNullRegExp, '')
-      this.operator = 'IS NOT'
-      this.value = 'NULL'
-    }
-    else if (where.search(Where.inRegExp) > -1) {
-      this.column = where.replace(Where.inRegExp, '')
-      this.operator = 'IN'
-    }
-    else {
-      this.column = where
-    }
+      // if we got a second parameter then the first one must be a column
+      if (typeof whereOrColumn == 'string') {
+        // trim the column
+        column = whereOrColumn.trim()
+      }
+      else {
+        // if the given column was not a string then there is something wrong
+        throw new Error(`Given column is not of type string. ${whereOrColumn}`)
+      }
 
-    if (valueOrOperator !== undefined) {
-      // 4 because LIKE is the longest supported operator
-      if (typeof valueOrOperator == 'string') {
-        if (valueOrOperator.search(Where.nullRegExp) == 0) {
-          this.operator = 'IS'
-          this.value = 'NULL'
-        }
-        else if (valueOrOperator.search(Where.notNullRegExp) == 0) {
-          this.operator = 'IS NOT'
-          this.value = 'NULL'
+      // test if we got the third parameter
+      if (value !== undefined) {
+        let operator
+
+        // if we got the third parameter then the second one must be an operator
+        if (typeof valueOrOperatorOrExpression == 'string') {
+          // trim the operator
+          operator = valueOrOperatorOrExpression.trim()
         }
         else {
-          let upperCase = valueOrOperator.toUpperCase()
+          // if the given operator was not of type string then there is something wrong
+          throw new Error(`Given operator was not of type string. ${valueOrOperatorOrExpression}`)
+        }
 
-          if (upperCase == '=' && (value === null || typeof value == 'string' && value.toUpperCase() == 'NULL')) {
-            this.operator = 'IS'
+        // if the value is exactly null or NULL as string and if so we will use the IS operator
+        if (value === null || typeof value == 'string' && value.toUpperCase() == 'NULL') {
+          if (Null.isOperator(operator)) {
+            this.predicate = new Null(column, operator == 'IS NOT')
           }
-          else if (upperCase == '<>' && (value === null || typeof value == 'string' && value.toUpperCase() == 'NULL')) {
-            this.operator = 'IS NOT'
+          else if (operator == '=') {
+            this.predicate = new Null(column)
           }
-          else if (upperCase == '!=' && (value === null || typeof value == 'string' && value.toUpperCase() == 'NULL')) {
-            this.operator = 'IS NOT'
-          }
-          else if (upperCase == '=' || upperCase == '>' || upperCase == '<' || upperCase == '>=' ||
-              upperCase == '<=' || upperCase == '<>' || upperCase == '!=' || upperCase == 'IN' || 
-              upperCase == 'IS' || upperCase == 'IS NOT' || upperCase == 'LIKE' || upperCase == 'ILIKE') {
-            this.operator = upperCase
+          else if (operator == '<>' || operator == '!=') {
+            this.predicate = new Null(column, true)
           }
           else {
-            this.operator = '='
-            this.value = valueOrOperator
+            // if the operator was neither = nor <> or != then there is something wrong
+            throw new Error(`The given value was null but the given operator was neither '=' nor '<>' or '!='. ${operator}`)
+          }
+        }
+        // if the value is an array we have to use the IN operator
+        else if (value instanceof Array) {
+          if (In.isOperator(operator)) {
+            this.predicate = new In(column, value)
+          }
+          else {
+            throw new Error(`The given operator does not work in conjunction with an array. Should be IN. ${operator}`)
+          }
+        }
+        // if the value is anything else but NULL
+        else {
+          if (Comparison.isOperator(operator)) {
+            this.predicate = new Comparison(column, operator, value)
+          }
+          else {
+            throw new Error(`The given operator is unsupported. ${operator}`)
           }
         }
       }
-      else if (valueOrOperator === null) {
-        this.operator = 'IS'
-        this.value = 'NULL'
-      }
-      else if (valueOrOperator instanceof Array) {
-        this.operator = 'IN'
-        this.value = valueOrOperator
-      }
+      // we got no second parameter which either means we only got an operator without a value or we got an expression without a column in it
       else {
-        this.operator = '='
-        this.value = valueOrOperator
-      }
-    }
+        // if the second parameter was a string we can test if it is an expression
+        if (typeof valueOrOperatorOrExpression == 'string') {
+          let expression = valueOrOperatorOrExpression.trim()
 
-    if (value === null) {
-      this.value = 'NULL'
+          let comparison = Comparison.parseFromOperatorOn(column, expression)
+          if (comparison != undefined) {
+            this.predicate = comparison
+            return
+          }
+
+          let nullPredicate = Null.parseFromOperatorOn(column, expression)
+          if (nullPredicate != undefined) {
+            this.predicate = nullPredicate
+            return
+          }
+
+          let inPredicate = In.parseFromOperatorOn(column, expression)
+          if (inPredicate != null) {
+            this.predicate = inPredicate
+            return
+          }
+        }
+
+        // if we still get here then we could not parse the expression and we can assume that we have been given a value
+        let value = valueOrOperatorOrExpression
+
+        // if the given value is exactly null or of type string and NULL then we use the IS operator
+        if (value === null || typeof value == 'string' && value.toUpperCase() == 'NULL') {
+          this.predicate = new Null(column)
+        }
+        // if the value is an array then we use the IN operator
+        else if (value instanceof Array) {
+          this.predicate = new In(column, value)
+        }
+        // anything else is a comparison with the = operator
+        else {
+          this.predicate = new Comparison(column, '=', value)
+        }
+      }
     }
-    else if (value !== undefined) {
-      if (typeof value == 'string' && value.toUpperCase() == 'NULL') {
-        this.value = 'NULL'
-      }
-      else {
-        this.value = value
-      }
+    // we got no second parameter which means the first one is a whole expression
+    else {
+      throw new Error('Not implemented')
     }
   }
 
-  isValueSqlKeyword(): boolean {
-    return (this.operator == 'IS' || this.operator == 'IS NOT') && this.value == 'NULL'
-  }
+  sql(db: string = 'mysql', parameterIndex?: number): string | { sql: string, parameterIndex: number } {
+    let index
+    if (parameterIndex == undefined) {
+      index = 1
+    }
+    else {
+      index = parameterIndex
+    }
 
-  sql(db: string = 'mysql', parameterIndex?: number): string | { sql: string, varIndex: number } {
-    let externalVarIndex = true
+    let result = <{ sql: string, parameterIndex: number }> this.predicate.sql(db, index)
 
     if (parameterIndex == undefined) {
-      parameterIndex = 1
-      externalVarIndex = false
-    }
-
-    let sql = this.column + ' ' + this.operator
-
-    if (this.operator == 'IN') {
-      sql += ' ('
-
-      if (this.value instanceof Array && this.value.length > 0) {
-
-        let firstValue = true        
-        for (let value of this.value) {
-          if (! firstValue) {
-            sql += ', '
-          }
-
-          sql += getParameterQueryString(db, parameterIndex)
-          parameterIndex++
-          firstValue = false
-        }
-      }
-
-      sql += ')'
-    }
-    else if (this.value === 'NULL') {
-      sql += ' ' + this.value
+      return result.sql
     }
     else {
-      sql += ' ' + getParameterQueryString(db, parameterIndex)
-      parameterIndex++
+      return result
+    }
+  }
+
+  values(): any[] {
+    return this.predicate.values()
+  }
+}
+
+abstract class Predicate {
+  abstract sql(db: string, parameterIndex?: number): string | { sql: string, parameterIndex: number }
+  abstract values(): any[]
+}
+
+class Comparison extends Predicate {
+
+  private static readonly regex = /(\w+)\s+(=|<>|!=|>|>=|<|<=)\s+(')?([^']+)(')?/
+  private static readonly regexFromOperatorOn = /(=|<>|!=|>|>=|<|<=)\s+(')?([^']+)(')?/
+
+  column: string
+  operator: string
+  value?: any
+
+  constructor(column: string, operator: string, value?: any) {
+    super()
+
+    this.column = column
+    this.operator = operator
+    this.value = value
+  }
+
+  sql(db: string, parameterIndex?: number): string | { sql: string, parameterIndex: number } {
+    if (parameterIndex == undefined) {
+      return this.column + ' ' + this.operator + ' ' + getParameterQueryString(db, 1)
+    }
+    else {
+      return {
+        sql: this.column + ' ' + this.operator + ' ' + getParameterQueryString(db, parameterIndex),
+        parameterIndex: ++parameterIndex // ++ in front increases first and then assigns
+      }
+    }
+  }
+
+  values(): any[] {
+    return [ this.value ]
+  }
+
+  static isOperator(operator: string): boolean {
+    return operator == '=' ||
+        operator == '<>' ||
+        operator == '!=' ||
+        operator == '>' ||
+        operator == '>=' ||
+        operator == '<' ||
+        operator == '<='
+  }
+
+  static parse(expression: string): Comparison|undefined {
+    let result = this.regex.exec(expression)
+
+    if (result != undefined) {
+      let column = result[1]
+      let operator = result[2]
+      let leftApostrophe = result[3]
+      let value: string|number = result[4]
+      let rightApostrophe = result[5]
+
+      if (leftApostrophe == undefined) {
+        try {
+          value = parseInt(value)
+        }
+        catch (e) {}
+      }
+
+      return new Comparison(column, operator, value)
+    }
+  }
+
+  static parseFromOperatorOn(column: string, expression: string): Comparison|undefined {
+    let result = this.regexFromOperatorOn.exec(expression)
+
+    if (result != undefined) {
+      let operator = result[1]
+      let leftApostrophe = result[2]
+      let value: string|number = result[3]
+      let rightApostrophe = result[4]
+
+      if (leftApostrophe == undefined && rightApostrophe == undefined) {
+        try {
+          value = parseInt(value)
+        }
+        catch (e) {}
+      }
+
+      return new Comparison(column, operator, value)
+    }
+  }
+}
+
+class In extends Predicate {
+
+  private static readonly regex = /(\w+)\s+IN\s+(\()([^\)]*)(\))/i
+  private static readonly regexFromOperatorOn = /IN\s+(\()([^\)]*)(\))/i
+
+  column: string
+  valuesArray: any[]
+
+  constructor(column: string, values: any[]) {
+    super()
+
+    this.column = column
+    this.valuesArray = values
+  }
+
+  sql(db: string, parameterIndex?: number): string | { sql: string, parameterIndex: number } {
+    let index
+    if (parameterIndex == undefined) {
+      index = 1
+    }
+    else {
+      index = parameterIndex
     }
 
-    if (externalVarIndex) {
+    let sql = this.column + ' IN ('
+
+    if (this.valuesArray instanceof Array) {
+      for (let i = 0; i < this.valuesArray.length; i++) {
+        if (i > 0) {
+          sql += ', '
+        }
+
+        sql += getParameterQueryString(db, index)
+        index++
+      }
+    }
+
+    sql += ')'
+
+    if (parameterIndex == undefined) {
+      return sql
+    }
+    else {
       return {
         sql: sql,
-        varIndex: parameterIndex
+        parameterIndex: index
       }
     }
+  }
+
+  values(): any[] {
+    return this.valuesArray
+  }
+
+  static isOperator(operator: string) {
+    return operator == 'IN'
+  }
+
+  static parse(expression: string): In|undefined {
+    let result = this.regex.exec(expression)
+
+    if (result != undefined) {
+      let column = result[1]
+      let valuesExpression = result[2]
+      let values = this.convertToArray(valuesExpression)
+      return new In(column, values)
+    }
+  }
+
+  static parseFromOperatorOn(column: string, expression: string): In|undefined {
+    let result = this.regexFromOperatorOn.exec(expression)
+
+    if (result != undefined) {
+      let valuesExpression = result[1]
+      let values = this.convertToArray(valuesExpression)
+      return new In(column, values)
+    }
+  }
+
+  private static convertToArray(valuesExpression: string): any[] {
+    let values: any[] = []
+    if (valuesExpression.length > 0) {
+      let rawValues = valuesExpression.split(',')
+
+      for (let rawValue of rawValues) {
+        if (rawValue.length > 0 && rawValue[0] == '\'') {
+          values.push(rawValue.slice(1, rawValue.length - 2))
+        }
+        else {
+          try {
+            let value = parseFloat(rawValue)
+            values.push(value)
+          }
+          catch (e) {
+            values.push(rawValue)
+          }
+        }
+      }
+    }
+
+    return values
+  }
+}
+
+class Null extends Predicate {
+
+  private static readonly regex = /(\w+)\s+IS\s+(NOT(?:\s+))?NULL/i
+  private static readonly regexFromOperatorOn = /IS\s+(NOT(?:\s+))?NULL/i
+
+  column: string
+  not: boolean
+
+  constructor(column: string, not: boolean = false) {
+    super()
+
+    this.column = column
+    this.not = not
+  }
+
+  sql(db: string, parameterIndex?: number): string | { sql: string, parameterIndex: number } {
+    if (parameterIndex == undefined) {
+      return this.column + (this.not ? ' IS NOT NULL' : ' IS NULL')
+    }
     else {
-      return sql
+      return {
+        sql: this.column + (this.not ? ' IS NOT NULL' : ' IS NULL'),
+        parameterIndex: parameterIndex
+      }
+    }
+  }
+
+  values(): any[] {
+    return []
+  }
+
+  static isOperator(operator: string): boolean {
+    operator = operator.toUpperCase()
+    return typeof operator == 'string' && (operator == 'IS' || operator == 'IS NOT')
+  }
+
+  static parse(expression: string): Null|undefined {
+    let result = this.regex.exec(expression)
+
+    if (result != undefined) {
+      let column = result[1]
+      let not = result[2] == undefined ? false : true
+
+      return new Null(column, not)
+    }
+  }
+
+  static parseFromOperatorOn(column: string, expression: string): Null|undefined {
+    let result = this.regexFromOperatorOn.exec(expression)
+
+    if (result != undefined) {
+      let not = result[1] == undefined ? false : true
+
+      return new Null(column, not)
     }
   }
 }
