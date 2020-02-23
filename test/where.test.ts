@@ -3,211 +3,883 @@ import 'mocha'
 import { Where } from '../src/sql'
 
 describe('Where', function() {
-  describe('MySql', function() {
-    it('should render default equal where string when a value is given', function() {
-      let where = new Where('a', 'aValue')
-      let sql = where.sql()
-      expect(sql).to.equal('a = ?')
+  describe('constructor', function() {
+    describe('Comparison', function() {
+      describe('MySql', function() {
+        it('should render a comparison from a column and value', function() {
+          let where = new Where('a', 'aValue')
+          let sql = where.sql()
+          expect(sql).to.equal('a = ?')
+        })
+    
+        it('should render a comparison from a column, operator and value', function() {
+          let where = new Where('a', '>', 'aValue')
+          let sql = where.sql()
+          expect(sql).to.equal('a > ?')
+        })
+
+        it('should render a comparison from a column and an expression having a string as value', function() {
+          let where = new Where('a', '> \'aValue\'')
+          let sql = where.sql()
+          let values = where.values()
+          expect(sql).to.equal('a > ?')
+          expect(values).to.deep.equal(['aValue'])
+        })
+
+        it('should render a comparison from a column and an expression having a number as value', function() {
+          let where = new Where('a', '> 1')
+          let sql = where.sql()
+          let values = where.values()
+          expect(sql).to.equal('a > ?')
+          expect(values).to.deep.equal([1])
+        })
+
+        it('should render a comparison from a expression having a string as value', function() {
+          let where = new Where('a > \'aValue\'')
+          let sql = where.sql()
+          let values = where.values()
+          expect(sql).to.equal('a > ?')
+          expect(values).to.deep.equal(['aValue'])
+        })
+
+        it('should render a comparison from a expression having a number as value', function() {
+          let where = new Where('a > 1')
+          let sql = where.sql()
+          let values = where.values()
+          expect(sql).to.equal('a > ?')
+          expect(values).to.deep.equal([1])
+        })
+
+        it('should render a comparison from a logical, column and value', function() {
+          let where = new Where('OR', 'a', 'aValue')
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a = ?')
+        })
+    
+        it('should render a comparison from a logical, column, operator and value', function() {
+          let where = new Where('OR', 'a', '>', 'aValue')
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a > ?')
+        })
+
+        it('should render a comparison from a logical, column and an expression having a string as value', function() {
+          let where = new Where('OR', 'a', '> \'aValue\'')
+          let sql = where.sql()
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a > ?')
+          expect(values).to.deep.equal(['aValue'])
+        })
+
+        it('should render a comparison from a logical, column and an expression having a number as value', function() {
+          let where = new Where('OR', 'a', '> 1')
+          let sql = where.sql()
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a > ?')
+          expect(values).to.deep.equal([1])
+        })
+
+        it('should render a comparison from a logical and an expression having a string as value', function() {
+          let where = new Where('OR', 'a > \'aValue\'')
+          let sql = where.sql()
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a > ?')
+          expect(values).to.deep.equal(['aValue'])
+        })
+
+        it('should render a comparison from a logical and an expression having a number as value', function() {
+          let where = new Where('OR', 'a > 1')
+          let sql = where.sql()
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a > ?')
+          expect(values).to.deep.equal([1])
+        })
+      })
+
+      describe('PostgreSQL', function() {
+        it('should render a comparison from a column and value', function() {
+          let where = new Where('a', 'aValue')
+          let sql = where.sql('postgres')
+          expect(sql).to.equal('a = $1')
+        })
+    
+        it('should render a comparison from a column, operator and value', function() {
+          let where = new Where('a', '>', 'aValue')
+          let sql = where.sql('postgres')
+          expect(sql).to.equal('a > $1')
+        })
+
+        it('should render a comparison from a column and an expression having a string as value', function() {
+          let where = new Where('a', '> \'aValue\'')
+          let sql = where.sql('postgres')
+          let values = where.values()
+          expect(sql).to.equal('a > $1')
+          expect(values).to.deep.equal(['aValue'])
+        })
+
+        it('should render a comparison from a column and an expression having number as value', function() {
+          let where = new Where('a', '> 1')
+          let sql = where.sql('postgres')
+          let values = where.values()
+          expect(sql).to.equal('a > $1')
+          expect(values).to.deep.equal([1])
+        })
+
+        it('should render a comparison from a expression having a string as value', function() {
+          let where = new Where('a > \'aValue\'')
+          let sql = where.sql('postgres')
+          let values = where.values()
+          expect(sql).to.equal('a > $1')
+          expect(values).to.deep.equal(['aValue'])
+        })
+
+        it('should render a comparison from a expression having a number as value', function() {
+          let where = new Where('a > 1')
+          let sql = where.sql('postgres')
+          let values = where.values()
+          expect(sql).to.equal('a > $1')
+          expect(values).to.deep.equal([1])
+        })
+
+        it('should render a comparison from a logical, column and value', function() {
+          let where = new Where('OR', 'a', 'aValue')
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a = $1')
+        })
+    
+        it('should render a comparison from a logical, column, operator and value', function() {
+          let where = new Where('OR', 'a', '>', 'aValue')
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a > $1')
+        })
+
+        it('should render a comparison from a logical, column and an expression having a string as value', function() {
+          let where = new Where('OR', 'a', '> \'aValue\'')
+          let sql = where.sql('postgres')
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a > $1')
+          expect(values).to.deep.equal(['aValue'])
+        })
+
+        it('should render a comparison from a logical, column and an expression having a number as value', function() {
+          let where = new Where('OR', 'a', '> 1')
+          let sql = where.sql('postgres')
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a > $1')
+          expect(values).to.deep.equal([1])
+        })
+
+        it('should render a comparison from a logical and an expression having a string as value', function() {
+          let where = new Where('OR', 'a > \'aValue\'')
+          let sql = where.sql('postgres')
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a > $1')
+          expect(values).to.deep.equal(['aValue'])
+        })
+
+        it('should render a comparison from a logical and an expression having a number as value', function() {
+          let where = new Where('OR', 'a > 1')
+          let sql = where.sql('postgres')
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a > $1')
+          expect(values).to.deep.equal([1])
+        })
+      })
     })
 
-    it('should render a where string with a given operator when a value is given', function() {
-      let where = new Where('a', '>', 'aValue')
-      let sql = where.sql()
-      expect(sql).to.equal('a > ?')
+    describe('Null', function() {
+      describe('MySql', function() {
+        it('should render a NULL predicate from column and null', function() {
+          let where = new Where('a', null)
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from column and NULL', function() {
+          let where = new Where('a', 'NULL')
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from column, = and null', function() {
+          let where = new Where('a', '=', null)
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from column, = and NULL', function() {
+          let where = new Where('a', '=', 'NULL')
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from column ,<> and null', function() {
+          let where = new Where('a', '<>', null)
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from column, <> and NULL', function() {
+          let where = new Where('a', '<>', 'NULL')
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from column, != and null', function() {
+          let where = new Where('a', '!=', null)
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from column, != and NULL', function() {
+          let where = new Where('a', '!=', 'NULL')
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from column, IS and null', function() {
+          let where = new Where('a', 'IS', null)
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from column, IS and NULL', function() {
+          let where = new Where('a', 'IS', 'NULL')
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from column, IS NOT and null', function() {
+          let where = new Where('a', 'IS NOT', null)
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NOT NULL')
+        })  
+
+        it('should render a NULL predicate from column, IS NOT and NULL', function() {
+          let where = new Where('a', 'IS NOT', 'NULL')
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NOT NULL')
+        })  
+
+        it('should render a NULL predicate from column and IS NULL expression', function() {
+          let where = new Where('a', 'IS NULL')
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from column and IS NOT NULL expression', function() {
+          let where = new Where('a', 'IS NOT NULL')
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from expression', function() {
+          let where = new Where('a IS NULL')
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from expression', function() {
+          let where = new Where('a IS NOT NULL')
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+
+        it('should render a NULL predicate from a logical, column and null', function() {
+          let where = new Where('OR', 'a', null)
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column and NULL', function() {
+          let where = new Where('OR', 'a', 'NULL')
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column, = and null', function() {
+          let where = new Where('OR', 'a', '=', null)
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column, = and NULL', function() {
+          let where = new Where('OR', 'a', '=', 'NULL')
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column ,<> and null', function() {
+          let where = new Where('OR', 'a', '<>', null)
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column, <> and NULL', function() {
+          let where = new Where('OR', 'a', '<>', 'NULL')
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column, != and null', function() {
+          let where = new Where('OR', 'a', '!=', null)
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column, != and NULL', function() {
+          let where = new Where('OR', 'a', '!=', 'NULL')
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column, IS and null', function() {
+          let where = new Where('OR', 'a', 'IS', null)
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column, IS and NULL', function() {
+          let where = new Where('OR', 'a', 'IS', 'NULL')
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column, IS NOT and null', function() {
+          let where = new Where('OR', 'a', 'IS NOT', null)
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NOT NULL')
+        })  
+
+        it('should render a NULL predicate from a logical, column, IS NOT and NULL', function() {
+          let where = new Where('OR', 'a', 'IS NOT', 'NULL')
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NOT NULL')
+        })  
+
+        it('should render a NULL predicate from a logical, column and IS NULL expression', function() {
+          let where = new Where('OR', 'a', 'IS NULL')
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column and IS NOT NULL expression', function() {
+          let where = new Where('OR', 'a', 'IS NOT NULL')
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from a logical and an IS NULL expression', function() {
+          let where = new Where('OR', 'a IS NULL')
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from a logical and an IS NOT NULL expression', function() {
+          let where = new Where('OR', 'a IS NOT NULL')
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+      })
+
+      describe('PostgreSQL', function() {
+        it('should render a NULL predicate from column and null', function() {
+          let where = new Where('a', null)
+          let sql = where.sql('postgres')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from column and NULL', function() {
+          let where = new Where('a', 'NULL')
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from column, = and null', function() {
+          let where = new Where('a', '=', null)
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from column, = and NULL', function() {
+          let where = new Where('a', '=', 'NULL')
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from column ,<> and null', function() {
+          let where = new Where('a', '<>', null)
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from column, <> and NULL', function() {
+          let where = new Where('a', '<>', 'NULL')
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from column, != and null', function() {
+          let where = new Where('a', '!=', null)
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from column, != and NULL', function() {
+          let where = new Where('a', '!=', 'NULL')
+          let sql = where.sql()
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from column, IS and null', function() {
+          let where = new Where('a', 'IS', null)
+          let sql = where.sql('postgres')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from column, IS and NULL', function() {
+          let where = new Where('a', 'IS', 'NULL')
+          let sql = where.sql('postgres')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from column, IS NOT and null', function() {
+          let where = new Where('a', 'IS NOT', null)
+          let sql = where.sql('postgres')
+          expect(sql).to.equal('a IS NOT NULL')
+        })    
+    
+        it('should render a NULL predicate from column, IS NOT and NULL', function() {
+          let where = new Where('a', 'IS NOT', 'NULL')
+          let sql = where.sql('postgres')
+          expect(sql).to.equal('a IS NOT NULL')
+        })    
+    
+        it('should render a NULL predicate from column and IS NULL expression', function() {
+          let where = new Where('a', 'IS NULL')
+          let sql = where.sql('postgres')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from column and IS NOT NULL expression', function() {
+          let where = new Where('a', 'IS NOT NULL')
+          let sql = where.sql('postgres')
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from expression', function() {
+          let where = new Where('a IS NULL')
+          let sql = where.sql('postgres')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from expression', function() {
+          let where = new Where('a IS NOT NULL')
+          let sql = where.sql('postgres')
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+
+        it('should render a NULL predicate from a logical, column and null', function() {
+          let where = new Where('OR', 'a', null)
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column and NULL', function() {
+          let where = new Where('OR', 'a', 'NULL')
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column, = and null', function() {
+          let where = new Where('OR', 'a', '=', null)
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column, = and NULL', function() {
+          let where = new Where('OR', 'a', '=', 'NULL')
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column ,<> and null', function() {
+          let where = new Where('OR', 'a', '<>', null)
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column, <> and NULL', function() {
+          let where = new Where('OR', 'a', '<>', 'NULL')
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column, != and null', function() {
+          let where = new Where('OR', 'a', '!=', null)
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column, != and NULL', function() {
+          let where = new Where('OR', 'a', '!=', 'NULL')
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column, IS and null', function() {
+          let where = new Where('OR', 'a', 'IS', null)
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column, IS and NULL', function() {
+          let where = new Where('OR', 'a', 'IS', 'NULL')
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column, IS NOT and null', function() {
+          let where = new Where('OR', 'a', 'IS NOT', null)
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NOT NULL')
+        })  
+
+        it('should render a NULL predicate from a logical, column, IS NOT and NULL', function() {
+          let where = new Where('OR', 'a', 'IS NOT', 'NULL')
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NOT NULL')
+        })  
+
+        it('should render a NULL predicate from a logical, column and IS NULL expression', function() {
+          let where = new Where('OR', 'a', 'IS NULL')
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from a logical, column and IS NOT NULL expression', function() {
+          let where = new Where('OR', 'a', 'IS NOT NULL')
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+    
+        it('should render a NULL predicate from a logical and an IS NULL expression', function() {
+          let where = new Where('OR', 'a IS NULL')
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NULL')
+        })
+    
+        it('should render a NULL predicate from a logical and an IS NOT NULL expression', function() {
+          let where = new Where('OR', 'a IS NOT NULL')
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IS NOT NULL')
+        })
+      })
     })
 
-    it('should render a IS NULL from a null value', function() {
-      let where = new Where('a', null)
-      let sql = where.sql()
-      expect(sql).to.equal('a IS NULL')
-    })
+    describe('In', function() {
+      describe('MySQL', function() {
+        it('should render an IN predicate from column, IN and array', function() {
+          let where = new Where('a', 'IN', [1, 2, 3, 4])
+          let sql = where.sql()
+          expect(sql).to.equal('a IN (?, ?, ?, ?)')
+        })
+      
+        it('should render an empty IN predicate from column, IN and array', function() {
+          let where = new Where('a', 'IN', [])
+          let sql = where.sql()
+          expect(sql).to.equal('a IN ()')
+        })
 
-    it('should render a IS NULL from a = operator and a null value', function() {
-      let where = new Where('a', '=', null)
-      let sql = where.sql()
-      expect(sql).to.equal('a IS NULL')
-    })
+        it('should render an IN predicate from column and an expression with numbers as values', function() {
+          let where = new Where('a', 'IN (1, 2, 3, 4)')
+          let sql = where.sql()
+          let values = where.values()
+          expect(sql).to.equal('a IN (?, ?, ?, ?)')
+          expect(values).to.deep.equal([1, 2, 3, 4])
+        })
+      
+        it('should render an IN predicate from column and an expression with strings as values', function() {
+          let where = new Where('a', 'IN (\'a\', \'b\', \'c\', \'d\')')
+          let sql = where.sql()
+          let values = where.values()
+          expect(sql).to.equal('a IN (?, ?, ?, ?)')
+          expect(values).to.deep.equal(['a', 'b', 'c', 'd'])
+        })
 
-    it('should render a IS NULL from a = operator and a NULL string value', function() {
-      let where = new Where('a', '=', 'NULL')
-      let sql = where.sql()
-      expect(sql).to.equal('a IS NULL')
-    })
+        it('should render an IN predicate from column and an expression with booleans as values', function() {
+          let where = new Where('a', 'IN (TRUE, false)')
+          let sql = where.sql()
+          let values = where.values()
+          expect(sql).to.equal('a IN (?, ?)')
+          expect(values).to.deep.equal([true, false])
+        })      
 
-    it('should render a IS NOT NULL from a <> operator and a null value', function() {
-      let where = new Where('a', '<>', null)
-      let sql = where.sql()
-      expect(sql).to.equal('a IS NOT NULL')
-    })
+        it('should render an IN predicate from an expression with numbers as values', function() {
+          let where = new Where('a IN (1, 2, 3, 4)')
+          let sql = where.sql()
+          let values = where.values()
+          expect(sql).to.equal('a IN (?, ?, ?, ?)')
+          expect(values).to.deep.equal([1, 2, 3, 4])
+        })
+      
+        it('should render an IN predicate from an expression with strings as values', function() {
+          let where = new Where('a IN (\'a\', \'b\', \'c\', \'d\')')
+          let sql = where.sql()
+          let values = where.values()
+          expect(sql).to.equal('a IN (?, ?, ?, ?)')
+          expect(values).to.deep.equal(['a', 'b', 'c', 'd'])
+        })
 
-    it('should render a IS NULL from a <> operator and a NULL string value', function() {
-      let where = new Where('a', '<>', 'NULL')
-      let sql = where.sql()
-      expect(sql).to.equal('a IS NOT NULL')
-    })
+        it('should render an IN predicate from an expression with booleans as values', function() {
+          let where = new Where('a IN (TRUE, false)')
+          let sql = where.sql()
+          let values = where.values()
+          expect(sql).to.equal('a IN (?, ?)')
+          expect(values).to.deep.equal([true, false])
+        })      
 
-    it('should render a IS NOT NULL from a != operator and a null value', function() {
-      let where = new Where('a', '!=', null)
-      let sql = where.sql()
-      expect(sql).to.equal('a IS NOT NULL')
-    })
+        it('should render an IN predicate from a logical, column, IN and array', function() {
+          let where = new Where('OR', 'a', 'IN', [1, 2, 3, 4])
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IN (?, ?, ?, ?)')
+        })
+      
+        it('should render an empty IN predicate from a logical, column, IN and array', function() {
+          let where = new Where('OR', 'a', 'IN', [])
+          let sql = where.sql()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IN ()')
+        })
 
-    it('should render a IS NULL from a != operator and a NULL string value', function() {
-      let where = new Where('a', '!=', 'NULL')
-      let sql = where.sql()
-      expect(sql).to.equal('a IS NOT NULL')
-    })
+        it('should render an IN predicate from a logical, column and an expression with numbers as values', function() {
+          let where = new Where('OR', 'a', 'IN (1, 2, 3, 4)')
+          let sql = where.sql()
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IN (?, ?, ?, ?)')
+          expect(values).to.deep.equal([1, 2, 3, 4])
+        })
+      
+        it('should render an IN predicate from a logical, column and an expression with strings as values', function() {
+          let where = new Where('OR', 'a', 'IN (\'a\', \'b\', \'c\', \'d\')')
+          let sql = where.sql()
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IN (?, ?, ?, ?)')
+          expect(values).to.deep.equal(['a', 'b', 'c', 'd'])
+        })
 
-    it('should render a IS NULL when it is given in the where parameter', function() {
-      let where = new Where('a IS NULL')
-      let sql = where.sql()
-      expect(sql).to.equal('a IS NULL')
-    })
+        it('should render an IN predicate from a logical, column and an expression with booleans as values', function() {
+          let where = new Where('OR', 'a', 'IN (TRUE, false)')
+          let sql = where.sql()
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IN (?, ?)')
+          expect(values).to.deep.equal([true, false])
+        })
 
-    it('should render a IS NULL when it is given in the value parameter', function() {
-      let where = new Where('a', 'IS NULL')
-      let sql = where.sql()
-      expect(sql).to.equal('a IS NULL')
-    })
+        it('should render an IN predicate from a logical and an expression with numbers as values', function() {
+          let where = new Where('OR', 'a IN (1, 2, 3, 4)')
+          let sql = where.sql()
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IN (?, ?, ?, ?)')
+          expect(values).to.deep.equal([1, 2, 3, 4])
+        })
+      
+        it('should render an IN predicate from a logical and an expression with strings as values', function() {
+          let where = new Where('OR', 'a IN (\'a\', \'b\', \'c\', \'d\')')
+          let sql = where.sql()
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IN (?, ?, ?, ?)')
+          expect(values).to.deep.equal(['a', 'b', 'c', 'd'])
+        })
 
-    it('should render a IS NULL when it is given in the operator and value parameter', function() {
-      let where = new Where('a', 'IS', 'NULL')
-      let sql = where.sql()
-      expect(sql).to.equal('a IS NULL')
-    })
+        it('should render an IN predicate from a logical and an expression with booleans as values', function() {
+          let where = new Where('OR', 'a IN (TRUE, false)')
+          let sql = where.sql()
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IN (?, ?)')
+          expect(values).to.deep.equal([true, false])
+        })
+      })
 
-    it('should render a IS NOT NULL when it is given in the where parameter', function() {
-      let where = new Where('a IS NOT NULL')
-      let sql = where.sql()
-      expect(sql).to.equal('a IS NOT NULL')
-    })
+      describe('PostgreSQL', function() {
+        it('should render an IN predicate from column, IN and array', function() {
+          let where = new Where('a', 'IN', [1, 2, 3, 4])
+          let sql = where.sql('postgres')
+          expect(sql).to.equal('a IN ($1, $2, $3, $4)')
+        })
+      
+        it('should render an empty IN predicate from column, IN and array', function() {
+          let where = new Where('a', 'IN', [])
+          let sql = where.sql('postgres')
+          expect(sql).to.equal('a IN ()')
+        })
 
-    it('should render a IS NOT NULL when it is given in the value parameter', function() {
-      let where = new Where('a', 'IS NOT NULL')
-      let sql = where.sql()
-      expect(sql).to.equal('a IS NOT NULL')
-    })
+        it('should render an IN predicate from column and an expression with numbers as values', function() {
+          let where = new Where('a', 'IN (1, 2, 3, 4)')
+          let sql = where.sql('postgres')
+          let values = where.values()
+          expect(sql).to.equal('a IN ($1, $2, $3, $4)')
+          expect(values).to.deep.equal([1, 2, 3, 4])
+        })
+      
+        it('should render an IN predicate from column and an expression with strings as values', function() {
+          let where = new Where('a', 'IN (\'a\', \'b\', \'c\', \'d\')')
+          let sql = where.sql('postgres')
+          let values = where.values()
+          expect(sql).to.equal('a IN ($1, $2, $3, $4)')
+          expect(values).to.deep.equal(['a', 'b', 'c', 'd'])
+        })
 
-    it('should render a IS NOT NULL when it is given in the operator and value parameter', function() {
-      let where = new Where('a', 'IS NOT', 'NULL')
-      let sql = where.sql()
-      expect(sql).to.equal('a IS NOT NULL')
-    })
+        it('should render an IN predicate from column and an expression with booleans as values', function() {
+          let where = new Where('a', 'IN (TRUE, false)')
+          let sql = where.sql('postgres')
+          let values = where.values()
+          expect(sql).to.equal('a IN ($1, $2)')
+          expect(values).to.deep.equal([true, false])
+        })
 
-    it('should render an IN operator', function() {
-      let where = new Where('a', 'IN', [1, 2, 3, 4])
-      let sql = where.sql()
-      expect(sql).to.equal('a IN (?, ?, ?, ?)')
-    })
-  
-    it('should render an empty IN operator', function() {
-      let where = new Where('a', 'IN', [])
-      let sql = where.sql()
-      expect(sql).to.equal('a IN ()')
-    })  
-  })
+        it('should render an IN predicate from an expression with numbers as values', function() {
+          let where = new Where('a IN (1, 2, 3, 4)')
+          let sql = where.sql('postgres')
+          let values = where.values()
+          expect(sql).to.equal('a IN ($1, $2, $3, $4)')
+          expect(values).to.deep.equal([1, 2, 3, 4])
+        })
+      
+        it('should render an IN predicate from an expression with strings as values', function() {
+          let where = new Where('a IN (\'a\', \'b\', \'c\', \'d\')')
+          let sql = where.sql('postgres')
+          let values = where.values()
+          expect(sql).to.equal('a IN ($1, $2, $3, $4)')
+          expect(values).to.deep.equal(['a', 'b', 'c', 'd'])
+        })
 
-  describe('PostgreSQL', function() {
-    it('should render default equal where string when a value is given', function() {
-      let where = new Where('a', 'aValue')
-      let sql = where.sql('postgres')
-      expect(sql).to.equal('a = $1')
-    })
+        it('should render an IN predicate from an expression with booleans as values', function() {
+          let where = new Where('a IN (TRUE, false)')
+          let sql = where.sql()
+          let values = where.values()
+          expect(sql).to.equal('a IN ($1, $2)')
+          expect(values).to.deep.equal([true, false])
+        })
 
-    it('should render a where string with a given operator when a value is given', function() {
-      let where = new Where('a', '>', 'aValue')
-      let sql = where.sql('postgres')
-      expect(sql).to.equal('a > $1')
-    })
+        it('should render an IN predicate from a logical, column, IN and array', function() {
+          let where = new Where('OR', 'a', 'IN', [1, 2, 3, 4])
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IN ($1, $2, $3, $4)')
+        })
+      
+        it('should render an empty IN predicate a logical, column, IN and array', function() {
+          let where = new Where('OR', 'a', 'IN', [])
+          let sql = where.sql('postgres')
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IN ()')
+        })
 
-    it('should render a IS NULL from a null value', function() {
-      let where = new Where('a', null)
-      let sql = where.sql('postgres')
-      expect(sql).to.equal('a IS NULL')
-    })
+        it('should render an IN predicate from a logical, column and an expression with numbers as values', function() {
+          let where = new Where('OR', 'a', 'IN (1, 2, 3, 4)')
+          let sql = where.sql('postgres')
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IN ($1, $2, $3, $4)')
+          expect(values).to.deep.equal([1, 2, 3, 4])
+        })
+      
+        it('should render an IN predicate from a logical, column and an expression with strings as values', function() {
+          let where = new Where('OR', 'a', 'IN (\'a\', \'b\', \'c\', \'d\')')
+          let sql = where.sql('postgres')
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IN ($1, $2, $3, $4)')
+          expect(values).to.deep.equal(['a', 'b', 'c', 'd'])
+        })
 
-    it('should render a IS NULL from a = operator and a null value', function() {
-      let where = new Where('a', '=', null)
-      let sql = where.sql()
-      expect(sql).to.equal('a IS NULL')
-    })
+        it('should render an IN predicate from a logical, column and an expression with booleans as values', function() {
+          let where = new Where('OR', 'a', 'IN (TRUE, false)')
+          let sql = where.sql('postgres')
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IN ($1, $2)')
+          expect(values).to.deep.equal([true, false])
+        })
 
-    it('should render a IS NULL from a = operator and a NULL string value', function() {
-      let where = new Where('a', '=', 'NULL')
-      let sql = where.sql()
-      expect(sql).to.equal('a IS NULL')
-    })
+        it('should render an IN predicate from a logical and an expression with numbers as values', function() {
+          let where = new Where('OR', 'a IN (1, 2, 3, 4)')
+          let sql = where.sql('postgres')
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IN ($1, $2, $3, $4)')
+          expect(values).to.deep.equal([1, 2, 3, 4])
+        })
+      
+        it('should render an IN predicate from a logical and an expression with strings as values', function() {
+          let where = new Where('OR', 'a IN (\'a\', \'b\', \'c\', \'d\')')
+          let sql = where.sql('postgres')
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IN ($1, $2, $3, $4)')
+          expect(values).to.deep.equal(['a', 'b', 'c', 'd'])
+        })
 
-    it('should render a IS NOT NULL from a <> operator and a null value', function() {
-      let where = new Where('a', '<>', null)
-      let sql = where.sql()
-      expect(sql).to.equal('a IS NOT NULL')
+        it('should render an IN predicate from a logical and an expression with booleans as values', function() {
+          let where = new Where('OR', 'a IN (TRUE, false)')
+          let sql = where.sql()
+          let values = where.values()
+          expect(where.logical).to.equal('OR')
+          expect(sql).to.equal('a IN ($1, $2)')
+          expect(values).to.deep.equal([true, false])
+        })
+      })
     })
-
-    it('should render a IS NULL from a <> operator and a NULL string value', function() {
-      let where = new Where('a', '<>', 'NULL')
-      let sql = where.sql()
-      expect(sql).to.equal('a IS NOT NULL')
-    })
-
-    it('should render a IS NOT NULL from a != operator and a null value', function() {
-      let where = new Where('a', '!=', null)
-      let sql = where.sql()
-      expect(sql).to.equal('a IS NOT NULL')
-    })
-
-    it('should render a IS NULL from a != operator and a NULL string value', function() {
-      let where = new Where('a', '!=', 'NULL')
-      let sql = where.sql()
-      expect(sql).to.equal('a IS NOT NULL')
-    })
-
-    it('should render a IS NULL when it stands in the where parameter', function() {
-      let where = new Where('a IS NULL')
-      let sql = where.sql('postgres')
-      expect(sql).to.equal('a IS NULL')
-    })
-
-    it('should render a IS NULL when it stands in the value parameter', function() {
-      let where = new Where('a', 'IS NULL')
-      let sql = where.sql('postgres')
-      expect(sql).to.equal('a IS NULL')
-    })
-
-    it('should render a IS NULL when it stands in the operator and value parameter', function() {
-      let where = new Where('a', 'IS', 'NULL')
-      let sql = where.sql('postgres')
-      expect(sql).to.equal('a IS NULL')
-    })
-
-    it('should render a IS NOT NULL when it is given in the where parameter', function() {
-      let where = new Where('a IS NOT NULL')
-      let sql = where.sql('postgres')
-      expect(sql).to.equal('a IS NOT NULL')
-    })
-
-    it('should render a IS NOT NULL when it is given in the value parameter', function() {
-      let where = new Where('a', 'IS NOT NULL')
-      let sql = where.sql('postgres')
-      expect(sql).to.equal('a IS NOT NULL')
-    })
-
-    it('should render a IS NOT NULL when it is given in the operator and value parameter', function() {
-      let where = new Where('a', 'IS NOT', 'NULL')
-      let sql = where.sql('postgres')
-      expect(sql).to.equal('a IS NOT NULL')
-    })
-
-    it('should render an IN operator', function() {
-      let where = new Where('a', 'IN', [1, 2, 3, 4])
-      let sql = where.sql('postgres')
-      expect(sql).to.equal('a IN ($1, $2, $3, $4)')
-    })
-  
-    it('should render an empty IN operator', function() {
-      let where = new Where('a', 'IN', [])
-      let sql = where.sql('postgres')
-      expect(sql).to.equal('a IN ()')
-    })  
   })
 })

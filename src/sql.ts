@@ -82,8 +82,17 @@ export class Query {
     return this
   }
 
-  where(where: string, valueOrOperator?: any, value?: any): Query {
-    this._wheres.push(new Where(where, valueOrOperator, value))
+  where(where: string): Query
+  where(column: string, value: any): Query
+  where(column: string, operator: string, value: any): Query
+  where(column: string, expression: string): Query
+  where(logical: string, where: string): Query
+  where(logical: string, column: string, value: any): Query
+  where(logical: string, column: string, operator: string, value: any): Query
+  where(logical: string, column: string, expression: string): Query
+  
+  where(whereOrColumnOrLogical: string, valueOrOperatorOrExpressionOrWhereOrColumn?: any, valueOrOperatorOrExpression?: any, value?: any): Query {
+    this._wheres.push(new Where(whereOrColumnOrLogical, valueOrOperatorOrExpressionOrWhereOrColumn, valueOrOperatorOrExpression, value))
     return this
   }
 
@@ -209,7 +218,7 @@ export class Query {
       let firstWhere = true
       for (let where of this._wheres) {
         if (! firstWhere) {
-          sql += ' AND '
+          sql += ' ' + where.logical + ' '
         }
 
         let whereResult = <{ sql: string, parameterIndex: number }> where.sql(db, parameterIndex)
@@ -315,14 +324,30 @@ export class Join {
 export class Where {
 
   mode: string = 'mysql'
+  logical: string = 'AND' // AND or OR or XOR
   predicate: Predicate
 
   constructor(where: string)
   constructor(column: string, value: any)
   constructor(column: string, operator: string, value: any)
   constructor(column: string, expression: string)
+  constructor(logical: string, where: string)
+  constructor(logical: string, column: string, value: any)
+  constructor(logical: string, column: string, operator: string, value: any)
+  constructor(logical: string, column: string, expression: string)
   
-  constructor(whereOrColumn: string, valueOrOperatorOrExpression?: any, value?: any) {
+  constructor(whereOrColumnOrLogical: string, valueOrOperatorOrExpressionOrWhereOrColumn?: any, valueOrOperatorOrExpression?: any, value?: any) {
+    let whereOrColumn
+    if (whereOrColumnOrLogical == 'OR' || whereOrColumnOrLogical == 'XOR' || whereOrColumnOrLogical == 'AND') {
+      this.logical = whereOrColumnOrLogical
+      whereOrColumn = valueOrOperatorOrExpressionOrWhereOrColumn
+    }
+    else {
+      whereOrColumn = whereOrColumnOrLogical
+      value = valueOrOperatorOrExpression
+      valueOrOperatorOrExpression = valueOrOperatorOrExpressionOrWhereOrColumn
+    }
+
     // test if we got the second parameter
     if (valueOrOperatorOrExpression !== undefined) {
       let column
@@ -550,8 +575,8 @@ class Comparison extends Predicate {
 
 class In extends Predicate {
 
-  private static readonly regex = /(\w+)\s+IN\s+(\()([^\)]*)(\))/i
-  private static readonly regexFromOperatorOn = /IN\s+(\()([^\)]*)(\))/i
+  private static readonly regex = /(\w+)\s+IN\s+\(([^\)]*)\)/i
+  private static readonly regexFromOperatorOn = /IN\s+\(([^\)]*)\)/i
 
   column: string
   valuesArray: any[]
@@ -633,18 +658,28 @@ class In extends Predicate {
       let rawValues = valuesExpression.split(',')
 
       for (let rawValue of rawValues) {
-        if (rawValue.length > 0 && rawValue[0] == '\'') {
-          values.push(rawValue.slice(1, rawValue.length - 2))
-        }
-        else {
-          try {
+        rawValue = rawValue.trim()
+
+        if (rawValue.length > 0) {
+          if (rawValue[0] == '\'') {
+            values.push(rawValue.slice(1, rawValue.length - 1))
+          }
+          else if (rawValue.toLowerCase() == 'true') {
+            values.push(true)
+          }
+          else if (rawValue.toLowerCase() == 'false') {
+            values.push(false)
+          }
+          else {
             let value = parseFloat(rawValue)
-            values.push(value)
+            if (! isNaN(value)) {
+              values.push(value)
+            }
+            else {
+              values.push(rawValue)
+            }
           }
-          catch (e) {
-            values.push(rawValue)
-          }
-        }
+        } 
       }
     }
 
