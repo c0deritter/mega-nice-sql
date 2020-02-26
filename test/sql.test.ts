@@ -79,6 +79,14 @@ describe('sql', function() {
         expect(sqlString).to.equal('SELECT * FROM table WHERE a = $1 OR b > $2;')
       })
 
+      it('should handle sub wheres', function() {
+        let query = sql.select('*').from('table').where(where('a', 'a'), where('XOR', 'b', 1)).where('OR', where('c', false))
+        let sqlString = query.sql()
+        let values = query.values()
+        expect(sqlString).to.equal('SELECT * FROM table WHERE (a = $1 XOR b = $2) OR (c = $3);')
+        expect(values).to.deep.equal(['a', 1, false])
+      })
+
       it('should create a select SQL statement without where criteria', function() {
         let query = sql.select('*').from('table')
         let sqlString = query.sql('postgres')

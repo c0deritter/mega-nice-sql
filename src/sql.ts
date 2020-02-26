@@ -82,16 +82,18 @@ export class Query {
     return this
   }
 
-  where(where: string, values: any[]): Query
+  where(expression: string, values: any[]): Query
   where(column: string, value: any): Query
   where(column: string, operator: string, value: any): Query
   where(column: string, expression: string): Query
-  where(...where: Where[]): Query
-  where(logical: string, where: string, values: any[]): Query
+  where(...wheres: Where[]): Query
+  where(predicate: Predicate): Query
+  where(logical: string, expression: string, values: any[]): Query
   where(logical: string, column: string, value: any): Query
   where(logical: string, column: string, operator: string, value: any): Query
   where(logical: string, column: string, expression: string): Query
-  where(logical: string, ...where: Where[]): Query
+  where(logical: string, ...wheres: Where[]): Query
+  where(logical: string, predicate: Predicate): Query
   
   where(...args: any[]): Query {
     this._wheres.push(new Where(...args))
@@ -323,17 +325,18 @@ export class Join {
   }
 }
 
-export function where(where: string, values: any[]): Where
+export function where(expression: string, values: any[]): Where
 export function where(column: string, value: any): Where
 export function where(column: string, operator: string, value: any): Where
 export function where(column: string, expression: string): Where
-export function where(...where: Where[]): Where
-export function where(logical: string, where: string, values: any[]): Where
-export function where(logical: string, where: string): Where
+export function where(...wheres: Where[]): Where
+export function where(predicate: Predicate): Where
+export function where(logical: string, expression: string, values: any[]): Where
 export function where(logical: string, column: string, value: any): Where
 export function where(logical: string, column: string, operator: string, value: any): Where
 export function where(logical: string, column: string, expression: string): Where
-export function where(logical: string, ...where: Where[]): Where
+export function where(logical: string, ...wheres: Where[]): Where
+export function where(logical: string, predicate: Predicate): Where
 
 export function where(...args: any[]): Where {
   return new Where(...args)
@@ -346,19 +349,24 @@ export class Where {
   predicate?: Predicate
   wheres?: Where[]
 
-  constructor(where: string, values: [])
+  constructor(expression: string, values: [])
   constructor(column: string, value: any)
   constructor(column: string, operator: string, value: any)
   constructor(column: string, expression: string)
-  constructor(...where: Where[])
-  constructor(logical: string, where: string, values: [])
-  constructor(logical: string, where: string)
+  constructor(...wheres: Where[])
+  constructor(predicate: Predicate)
+  constructor(logical: string, expression: string, values: [])
   constructor(logical: string, column: string, value: any)
   constructor(logical: string, column: string, operator: string, value: any)
   constructor(logical: string, column: string, expression: string)
-  constructor(logical: string, ...where: Where[])
+  constructor(logical: string, ...wheres: Where[])
+  constructor(logical: string, predicate: Predicate)
   
   constructor(...args: any[]) {
+    if (args.length == 0) {
+      return
+    }
+
     if (args[0] instanceof Where || args.length >= 2 && args[1] instanceof Where) {
       let i = 0
       if (args[i] == 'OR' || args[i] == 'XOR' || args[i] == 'AND') {
@@ -370,6 +378,16 @@ export class Where {
       for (; i < args.length; i++) {
         this.wheres.push(args[i])
       }
+    }
+    if (args[0] instanceof Predicate || args.length >= 2 && args[1] instanceof Predicate) {
+      let i = 0
+      if (args[i] == 'OR' || args[i] == 'XOR' || args[i] == 'AND') {
+        this.logical = args[i]
+        i++
+      }
+
+      let predicate: Predicate = args[i]
+      this.predicate = predicate
     }
     else {
       let whereOrColumnOrLogical = args[0]
@@ -495,7 +513,15 @@ export class Where {
       }
       // we got no second parameter which means the first one is a whole expression
       else {
-        throw new Error('Not implemented')
+        let i = 0
+        if (args[i] == 'OR' || args[i] == 'XOR' || args[i] == 'AND') {
+          this.logical = args[i]
+          i++
+        }
+
+        let expression = args[i]
+        let values = args[++i]
+        this.wheres = []
       }  
     }
   }
@@ -569,10 +595,102 @@ export class Where {
   }
 }
 
+function whereExpressionToWhere(expression: string): Where {
+  expression = expression.trim()
+  let wheres: Where[] = []
+
+  do {
+    let indexOfFirstBracket = expression.indexOf('(')
+    if (indexOfFirstBracket > -1) {
+      let expressionBeforeFirstBracket = expression.substr(0, indexOfFirstBracket)
+      if (expressionBeforeFirstBracket.length > 0) {
+        let where = whereExpressionToWhere(expressionBeforeFirstBracket)
+        if (where.wheres) {
+          wheres.push(...where.wheres)
+        }
+      }
+
+      let i = indexOfFirstBracket
+      let brackets = 1
+      let expressionAfterFirstBracket = expression.substr(indexOfFirstBracket)
+
+      for (; i < expressionAfterFirstBracket.length; i++) {
+        if (expressionAfterFirstBracket[i] == '(') {
+          brackets++
+        }
+
+        if (expressionAfterFirstBracket[i] == ')') {
+          if (brackets > 1) {
+            brackets--
+          }
+          else {
+            let expressionBetweenBrackets = expressionAfterFirstBracket.substr(indexOfFirstBracket + 1, i - indexOfFirstBracket - 1)
+            let where = whereExpressionToWhere(expressionBetweenBrackets)
+            if (where.wheres) {
+              wheres.push(...where.wheres)
+            }    
+          }
+        }
+      }
+
+      expression = expression.substr(i + 1)
+
+      if (expression.length == 0) {
+        return new Where(...wheres)
+      }
+    }
+    else {
+      let lastLogical = 0
+
+      for (let i = 0; i < expression.length; i+= 2) {
+        let condition = undefined
+        let logical = undefined
+
+        let substr3 = expression.substr(i, 3)
+        if (substr3 == 'AND' || substr3 == 'XOR') {
+          condition = expression.substr(lastLogical, i - lastLogical - 1)
+          logical = substr3
+          lastLogical = i + 3
+          i = lastLogical
+        }
+        else if (expression.substr(i, 2) == 'OR') {
+          condition = expression.substr(lastLogical, i - lastLogical - 1)
+          logical = 'OR'
+          lastLogical = i + 2
+          i = lastLogical
+        }
+
+        if (condition != undefined && logical != undefined) {
+          let comparison = Comparison.parse(condition)
+          if (comparison != undefined) {
+            wheres.push(new Where(logical, comparison))
+            continue
+          }
+
+          let nullPredicate = Null.parse(condition)
+          if (nullPredicate != undefined) {
+            wheres.push(new Where(logical, nullPredicate))
+            continue
+          }
+
+          let inPredicate = In.parse(condition)
+          if (inPredicate != undefined) {
+            wheres.push(new Where(logical, inPredicate))
+            continue
+          }
+        }
+      }
+    }
+  }
+  while (true)
+}
+
 abstract class Predicate {
   abstract sql(db: string, parameterIndex?: number): string | { sql: string, parameterIndex: number }
   abstract values(): any[]
 }
+
+const awaitsValue = Symbol('AwaitsValue')
 
 class Comparison extends Predicate {
 
@@ -624,14 +742,19 @@ class Comparison extends Predicate {
       let column = result[1]
       let operator = result[2]
       let leftApostrophe = result[3]
-      let value: string|number = result[4]
+      let value: string|number|Symbol = result[4]
       let rightApostrophe = result[5]
 
       if (leftApostrophe == undefined) {
-        try {
-          value = parseInt(value)
+        if (value == '?' || value.length > 0 && value[0] == '$') {
+          value = awaitsValue
         }
-        catch (e) {}
+        else {
+          try {
+            value = parseInt(value)
+          }
+          catch (e) {}
+        }
       }
 
       return new Comparison(column, operator, value)
@@ -644,14 +767,19 @@ class Comparison extends Predicate {
     if (result != undefined) {
       let operator = result[1]
       let leftApostrophe = result[2]
-      let value: string|number = result[3]
+      let value: string|number|Symbol = result[3]
       let rightApostrophe = result[4]
 
       if (leftApostrophe == undefined && rightApostrophe == undefined) {
-        try {
-          value = parseInt(value)
+        if (value == '?' || value.length > 0 && value[0] == '$') {
+          value = awaitsValue
         }
-        catch (e) {}
+        else {
+          try {
+            value = parseInt(value)
+          }
+          catch (e) {}
+        }
       }
 
       return new Comparison(column, operator, value)
@@ -747,6 +875,11 @@ class In extends Predicate {
         rawValue = rawValue.trim()
 
         if (rawValue.length > 0) {
+          if (rawValue == '?' || rawValue[0] == '$') {
+            values.push(awaitsValue)
+            continue
+          }
+
           if (rawValue[0] == '\'') {
             values.push(rawValue.slice(1, rawValue.length - 1))
           }
