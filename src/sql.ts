@@ -321,6 +321,19 @@ export class Join {
   }
 }
 
+export function where(where: string): Where
+export function where(column: string, value: any): Where
+export function where(column: string, operator: string, value: any): Where
+export function where(column: string, expression: string): Where
+export function where(logical: string, where: string): Where
+export function where(logical: string, column: string, value: any): Where
+export function where(logical: string, column: string, operator: string, value: any): Where
+export function where(logical: string, column: string, expression: string): Where
+
+export function where(whereOrColumnOrLogical: string, valueOrOperatorOrExpressionOrWhereOrColumn?: any, valueOrOperatorOrExpression?: any, value?: any): Where {
+  return new Where(whereOrColumnOrLogical, valueOrOperatorOrExpressionOrWhereOrColumn, valueOrOperatorOrExpression, value)
+}
+
 export class Where {
 
   mode: string = 'mysql'
