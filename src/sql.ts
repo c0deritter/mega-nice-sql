@@ -82,17 +82,19 @@ export class Query {
     return this
   }
 
-  where(where: string): Query
+  where(where: string, values: any[]): Query
   where(column: string, value: any): Query
   where(column: string, operator: string, value: any): Query
   where(column: string, expression: string): Query
-  where(logical: string, where: string): Query
+  where(...where: Where[]): Query
+  where(logical: string, where: string, values: any[]): Query
   where(logical: string, column: string, value: any): Query
   where(logical: string, column: string, operator: string, value: any): Query
   where(logical: string, column: string, expression: string): Query
+  where(logical: string, ...where: Where[]): Query
   
-  where(whereOrColumnOrLogical: string, valueOrOperatorOrExpressionOrWhereOrColumn?: any, valueOrOperatorOrExpression?: any, value?: any): Query {
-    this._wheres.push(new Where(whereOrColumnOrLogical, valueOrOperatorOrExpressionOrWhereOrColumn, valueOrOperatorOrExpression, value))
+  where(...args: any[]): Query {
+    this._wheres.push(new Where(...args))
     return this
   }
 
@@ -321,154 +323,180 @@ export class Join {
   }
 }
 
-export function where(where: string): Where
+export function where(where: string, values: any[]): Where
 export function where(column: string, value: any): Where
 export function where(column: string, operator: string, value: any): Where
 export function where(column: string, expression: string): Where
+export function where(...where: Where[]): Where
+export function where(logical: string, where: string, values: any[]): Where
 export function where(logical: string, where: string): Where
 export function where(logical: string, column: string, value: any): Where
 export function where(logical: string, column: string, operator: string, value: any): Where
 export function where(logical: string, column: string, expression: string): Where
+export function where(logical: string, ...where: Where[]): Where
 
-export function where(whereOrColumnOrLogical: string, valueOrOperatorOrExpressionOrWhereOrColumn?: any, valueOrOperatorOrExpression?: any, value?: any): Where {
-  return new Where(whereOrColumnOrLogical, valueOrOperatorOrExpressionOrWhereOrColumn, valueOrOperatorOrExpression, value)
+export function where(...args: any[]): Where {
+  return new Where(...args)
 }
 
 export class Where {
 
   mode: string = 'mysql'
   logical: string = 'AND' // AND or OR or XOR
-  predicate: Predicate
+  predicate?: Predicate
+  wheres?: Where[]
 
-  constructor(where: string)
+  constructor(where: string, values: [])
   constructor(column: string, value: any)
   constructor(column: string, operator: string, value: any)
   constructor(column: string, expression: string)
+  constructor(...where: Where[])
+  constructor(logical: string, where: string, values: [])
   constructor(logical: string, where: string)
   constructor(logical: string, column: string, value: any)
   constructor(logical: string, column: string, operator: string, value: any)
   constructor(logical: string, column: string, expression: string)
+  constructor(logical: string, ...where: Where[])
   
-  constructor(whereOrColumnOrLogical: string, valueOrOperatorOrExpressionOrWhereOrColumn?: any, valueOrOperatorOrExpression?: any, value?: any) {
-    let whereOrColumn
-    if (whereOrColumnOrLogical == 'OR' || whereOrColumnOrLogical == 'XOR' || whereOrColumnOrLogical == 'AND') {
-      this.logical = whereOrColumnOrLogical
-      whereOrColumn = valueOrOperatorOrExpressionOrWhereOrColumn
+  constructor(...args: any[]) {
+    if (args[0] instanceof Where || args.length >= 2 && args[1] instanceof Where) {
+      let i = 0
+      if (args[i] == 'OR' || args[i] == 'XOR' || args[i] == 'AND') {
+        this.logical = args[i]
+        i++
+      }
+
+      this.wheres = []
+      for (; i < args.length; i++) {
+        this.wheres.push(args[i])
+      }
     }
     else {
-      whereOrColumn = whereOrColumnOrLogical
-      value = valueOrOperatorOrExpression
-      valueOrOperatorOrExpression = valueOrOperatorOrExpressionOrWhereOrColumn
-    }
+      let whereOrColumnOrLogical = args[0]
+      let valueOrOperatorOrExpressionOrWhereOrColumn = args.length >= 2 ? args[1] : undefined
+      let valueOrOperatorOrExpression = args.length >= 3 ? args[2] : undefined
+      let value = args.length >= 4 ? args[3] : undefined
+      let whereOrColumn
 
-    // test if we got the second parameter
-    if (valueOrOperatorOrExpression !== undefined) {
-      let column
-
-      // if we got a second parameter then the first one must be a column
-      if (typeof whereOrColumn == 'string') {
-        // trim the column
-        column = whereOrColumn.trim()
+      if (whereOrColumnOrLogical == 'OR' || whereOrColumnOrLogical == 'XOR' || whereOrColumnOrLogical == 'AND') {
+        this.logical = whereOrColumnOrLogical
+        whereOrColumn = valueOrOperatorOrExpressionOrWhereOrColumn
       }
       else {
-        // if the given column was not a string then there is something wrong
-        throw new Error(`Given column is not of type string. ${whereOrColumn}`)
+        whereOrColumn = whereOrColumnOrLogical
+        value = valueOrOperatorOrExpression
+        valueOrOperatorOrExpression = valueOrOperatorOrExpressionOrWhereOrColumn
       }
-
-      // test if we got the third parameter
-      if (value !== undefined) {
-        let operator
-
-        // if we got the third parameter then the second one must be an operator
-        if (typeof valueOrOperatorOrExpression == 'string') {
-          // trim the operator
-          operator = valueOrOperatorOrExpression.trim()
+  
+      // test if we got the second parameter
+      if (valueOrOperatorOrExpression !== undefined) {
+        let column
+  
+        // if we got a second parameter then the first one must be a column
+        if (typeof whereOrColumn == 'string') {
+          // trim the column
+          column = whereOrColumn.trim()
         }
         else {
-          // if the given operator was not of type string then there is something wrong
-          throw new Error(`Given operator was not of type string. ${valueOrOperatorOrExpression}`)
+          // if the given column was not a string then there is something wrong
+          throw new Error(`Given column is not of type string. ${whereOrColumn}`)
         }
-
-        // if the value is exactly null or NULL as string and if so we will use the IS operator
-        if (value === null || typeof value == 'string' && value.toUpperCase() == 'NULL') {
-          if (Null.isOperator(operator)) {
-            this.predicate = new Null(column, operator == 'IS NOT')
+  
+        // test if we got the third parameter
+        if (value !== undefined) {
+          let operator
+  
+          // if we got the third parameter then the second one must be an operator
+          if (typeof valueOrOperatorOrExpression == 'string') {
+            // trim the operator
+            operator = valueOrOperatorOrExpression.trim()
           }
-          else if (operator == '=') {
+          else {
+            // if the given operator was not of type string then there is something wrong
+            throw new Error(`Given operator was not of type string. ${valueOrOperatorOrExpression}`)
+          }
+  
+          // if the value is exactly null or NULL as string and if so we will use the IS operator
+          if (value === null || typeof value == 'string' && value.toUpperCase() == 'NULL') {
+            if (Null.isOperator(operator)) {
+              this.predicate = new Null(column, operator == 'IS NOT')
+            }
+            else if (operator == '=') {
+              this.predicate = new Null(column)
+            }
+            else if (operator == '<>' || operator == '!=') {
+              this.predicate = new Null(column, true)
+            }
+            else {
+              // if the operator was neither = nor <> or != then there is something wrong
+              throw new Error(`The given value was null but the given operator was neither '=' nor '<>' or '!='. ${operator}`)
+            }
+          }
+          // if the value is an array we have to use the IN operator
+          else if (value instanceof Array) {
+            if (In.isOperator(operator)) {
+              this.predicate = new In(column, value)
+            }
+            else {
+              throw new Error(`The given operator does not work in conjunction with an array. Should be IN. ${operator}`)
+            }
+          }
+          // if the value is anything else but NULL
+          else {
+            if (Comparison.isOperator(operator)) {
+              this.predicate = new Comparison(column, operator, value)
+            }
+            else {
+              throw new Error(`The given operator is unsupported. ${operator}`)
+            }
+          }
+        }
+        // we got no second parameter which either means we only got an operator without a value or we got an expression without a column in it
+        else {
+          // if the second parameter was a string we can test if it is an expression
+          if (typeof valueOrOperatorOrExpression == 'string') {
+            let expression = valueOrOperatorOrExpression.trim()
+  
+            let comparison = Comparison.parseFromOperatorOn(column, expression)
+            if (comparison != undefined) {
+              this.predicate = comparison
+              return
+            }
+  
+            let nullPredicate = Null.parseFromOperatorOn(column, expression)
+            if (nullPredicate != undefined) {
+              this.predicate = nullPredicate
+              return
+            }
+  
+            let inPredicate = In.parseFromOperatorOn(column, expression)
+            if (inPredicate != null) {
+              this.predicate = inPredicate
+              return
+            }
+          }
+  
+          // if we still get here then we could not parse the expression and we can assume that we have been given a value
+          let value = valueOrOperatorOrExpression
+  
+          // if the given value is exactly null or of type string and NULL then we use the IS operator
+          if (value === null || typeof value == 'string' && value.toUpperCase() == 'NULL') {
             this.predicate = new Null(column)
           }
-          else if (operator == '<>' || operator == '!=') {
-            this.predicate = new Null(column, true)
-          }
-          else {
-            // if the operator was neither = nor <> or != then there is something wrong
-            throw new Error(`The given value was null but the given operator was neither '=' nor '<>' or '!='. ${operator}`)
-          }
-        }
-        // if the value is an array we have to use the IN operator
-        else if (value instanceof Array) {
-          if (In.isOperator(operator)) {
+          // if the value is an array then we use the IN operator
+          else if (value instanceof Array) {
             this.predicate = new In(column, value)
           }
+          // anything else is a comparison with the = operator
           else {
-            throw new Error(`The given operator does not work in conjunction with an array. Should be IN. ${operator}`)
-          }
-        }
-        // if the value is anything else but NULL
-        else {
-          if (Comparison.isOperator(operator)) {
-            this.predicate = new Comparison(column, operator, value)
-          }
-          else {
-            throw new Error(`The given operator is unsupported. ${operator}`)
+            this.predicate = new Comparison(column, '=', value)
           }
         }
       }
-      // we got no second parameter which either means we only got an operator without a value or we got an expression without a column in it
+      // we got no second parameter which means the first one is a whole expression
       else {
-        // if the second parameter was a string we can test if it is an expression
-        if (typeof valueOrOperatorOrExpression == 'string') {
-          let expression = valueOrOperatorOrExpression.trim()
-
-          let comparison = Comparison.parseFromOperatorOn(column, expression)
-          if (comparison != undefined) {
-            this.predicate = comparison
-            return
-          }
-
-          let nullPredicate = Null.parseFromOperatorOn(column, expression)
-          if (nullPredicate != undefined) {
-            this.predicate = nullPredicate
-            return
-          }
-
-          let inPredicate = In.parseFromOperatorOn(column, expression)
-          if (inPredicate != null) {
-            this.predicate = inPredicate
-            return
-          }
-        }
-
-        // if we still get here then we could not parse the expression and we can assume that we have been given a value
-        let value = valueOrOperatorOrExpression
-
-        // if the given value is exactly null or of type string and NULL then we use the IS operator
-        if (value === null || typeof value == 'string' && value.toUpperCase() == 'NULL') {
-          this.predicate = new Null(column)
-        }
-        // if the value is an array then we use the IN operator
-        else if (value instanceof Array) {
-          this.predicate = new In(column, value)
-        }
-        // anything else is a comparison with the = operator
-        else {
-          this.predicate = new Comparison(column, '=', value)
-        }
-      }
-    }
-    // we got no second parameter which means the first one is a whole expression
-    else {
-      throw new Error('Not implemented')
+        throw new Error('Not implemented')
+      }  
     }
   }
 
@@ -481,18 +509,63 @@ export class Where {
       index = parameterIndex
     }
 
-    let result = <{ sql: string, parameterIndex: number }> this.predicate.sql(db, index)
+    if (this.predicate) {
+      let result = <{ sql: string, parameterIndex: number }> this.predicate.sql(db, index)
 
-    if (parameterIndex == undefined) {
-      return result.sql
+      if (parameterIndex == undefined) {
+        return result.sql
+      }
+      else {
+        return result
+      }  
     }
     else {
-      return result
+      let sql = ''
+
+      if (this.wheres) {
+        sql += '('
+
+        let firstWhere = true
+        for (let where of this.wheres) {
+          if (! firstWhere) {
+            sql += ' ' + where.logical + ' '
+          }
+  
+          let result = <{ sql: string, parameterIndex: number }> where.sql(db, index)
+          sql += result.sql
+          firstWhere = false
+        }
+
+        sql += ')'
+      }
+
+      if (parameterIndex == undefined) {
+        return sql
+      }
+      else {
+        return {
+          sql: sql,
+          parameterIndex: index
+        }
+      }  
     }
   }
 
   values(): any[] {
-    return this.predicate.values()
+    if (this.predicate) {
+      return this.predicate.values()
+    }
+    else {
+      let values: any[] = []
+
+      if (this.wheres) {
+        for (let where of this.wheres) {
+          values.push(...where.values())
+        }
+      }
+
+      return values
+    }
   }
 }
 

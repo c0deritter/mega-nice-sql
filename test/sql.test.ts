@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import 'mocha'
-import sql from '../src/sql'
+import sql, { where } from '../src/sql'
 
 describe('sql', function() {
   describe('MySql', function() {
@@ -31,6 +31,14 @@ describe('sql', function() {
         let query = sql.select('*').from('table').where('a', 'a').where('OR', 'b', '>', 'b')
         let sqlString = query.sql()
         expect(sqlString).to.equal('SELECT * FROM table WHERE a = ? OR b > ?;')
+      })
+
+      it('should handle sub wheres', function() {
+        let query = sql.select('*').from('table').where(where('a', 'a'), where('XOR', 'b', 1)).where('OR', where('c', false))
+        let sqlString = query.sql()
+        let values = query.values()
+        expect(sqlString).to.equal('SELECT * FROM table WHERE (a = ? XOR b = ?) OR (c = ?);')
+        expect(values).to.deep.equal(['a', 1, false])
       })
 
       it('should create a select SQL statement without where criteria', function() {
