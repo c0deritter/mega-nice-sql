@@ -82,12 +82,12 @@ export class Query {
     return this
   }
 
-  where(where: string, values: any[]): Query
+  where(expression: string, values: any[]): Query
   where(column: string, value: any): Query
   where(column: string, operator: string, value: any): Query
   where(column: string, expression: string): Query
   where(...where: Where[]): Query
-  where(logical: string, where: string, values: any[]): Query
+  where(logical: string, expression: string, values: any[]): Query
   where(logical: string, column: string, value: any): Query
   where(logical: string, column: string, operator: string, value: any): Query
   where(logical: string, column: string, expression: string): Query
@@ -323,13 +323,12 @@ export class Join {
   }
 }
 
-export function where(where: string, values: any[]): Where
+export function where(expression: string, values: any[]): Where
 export function where(column: string, value: any): Where
 export function where(column: string, operator: string, value: any): Where
 export function where(column: string, expression: string): Where
 export function where(...where: Where[]): Where
-export function where(logical: string, where: string, values: any[]): Where
-export function where(logical: string, where: string): Where
+export function where(logical: string, expression: string, values: any[]): Where
 export function where(logical: string, column: string, value: any): Where
 export function where(logical: string, column: string, operator: string, value: any): Where
 export function where(logical: string, column: string, expression: string): Where
@@ -345,14 +344,15 @@ export class Where {
   logical: string = 'AND' // AND or OR or XOR
   predicate?: Predicate
   wheres?: Where[]
+  expression?: string
+  _values?: any[]
 
-  constructor(where: string, values: [])
+  constructor(expression: string, values: [])
   constructor(column: string, value: any)
   constructor(column: string, operator: string, value: any)
   constructor(column: string, expression: string)
   constructor(...where: Where[])
-  constructor(logical: string, where: string, values: [])
-  constructor(logical: string, where: string)
+  constructor(logical: string, expression: string, values: [])
   constructor(logical: string, column: string, value: any)
   constructor(logical: string, column: string, operator: string, value: any)
   constructor(logical: string, column: string, expression: string)
@@ -369,6 +369,24 @@ export class Where {
       this.wheres = []
       for (; i < args.length; i++) {
         this.wheres.push(args[i])
+      }
+    }
+    else if (args.length == 1) {
+      this.expression = args[0]
+    }
+    else if ((args.length == 1 || args.length == 2) && typeof args[0] == 'string' && args[0].indexOf(' ') > -1) {
+      this.expression = args[0]
+
+      if (args.length == 2) {
+        this._values = args[1]
+      }
+    }
+    else if ((args.length == 2 || args.length == 3) && (args[0] == 'AND' || args[0] == 'OR' || args[0] == 'XOR') && typeof args[1] == 'string' && args[1].indexOf(' ') > -1) {
+      this.logical = args[0]
+      this.expression = args[1]
+
+      if (args.length == 3) {
+        this._values = args[2]
       }
     }
     else {
@@ -493,10 +511,6 @@ export class Where {
           }
         }
       }
-      // we got no second parameter which means the first one is a whole expression
-      else {
-        throw new Error('Not implemented')
-      }  
     }
   }
 
@@ -519,23 +533,25 @@ export class Where {
         return result
       }  
     }
-    else {
+    else if (this.wheres != undefined) {
       let sql = ''
-
-      if (this.wheres) {
+      
+      if (this.wheres.length > 1) {
         sql += '('
+      }
 
-        let firstWhere = true
-        for (let where of this.wheres) {
-          if (! firstWhere) {
-            sql += ' ' + where.logical + ' '
-          }
-  
-          let result = <{ sql: string, parameterIndex: number }> where.sql(db, index)
-          sql += result.sql
-          firstWhere = false
+      let firstWhere = true
+      for (let where of this.wheres) {
+        if (! firstWhere) {
+          sql += ' ' + where.logical + ' '
         }
 
+        let result = <{ sql: string, parameterIndex: number }> where.sql(db, index)
+        sql += result.sql
+        firstWhere = false
+      }
+
+      if (this.wheres.length > 1) {
         sql += ')'
       }
 
@@ -549,23 +565,54 @@ export class Where {
         }
       }  
     }
+    else {
+      let expression = this.expression || ''
+
+      if (db == 'postgres') {
+        let indexOfParameter: number = 0
+
+        while ((indexOfParameter = expression.indexOf('$', indexOfParameter)) > -1) {
+          if (indexOfParameter + 1 < expression.length && expression[indexOfParameter + 1] != ' ') {
+            indexOfParameter++
+            continue
+          }
+
+          expression = expression.substr(0, indexOfParameter + 1) + index + expression.substr(indexOfParameter + 1)
+          index++
+          indexOfParameter++
+        }
+      }
+
+      if (parameterIndex == undefined) {
+        return expression
+      }
+      else {
+        return {
+          sql: expression,
+          parameterIndex: index
+        }
+      }
+    }
   }
 
   values(): any[] {
     if (this.predicate) {
       return this.predicate.values()
     }
-    else {
+    else if (this.wheres != undefined) {
       let values: any[] = []
 
-      if (this.wheres) {
-        for (let where of this.wheres) {
-          values.push(...where.values())
-        }
+      for (let where of this.wheres) {
+        values.push(...where.values())
       }
 
       return values
     }
+    else if (this._values != undefined) {
+      return this._values
+    }
+
+    return []
   }
 }
 

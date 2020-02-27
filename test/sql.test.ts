@@ -37,7 +37,7 @@ describe('sql', function() {
         let query = sql.select('*').from('table').where(where('a', 'a'), where('XOR', 'b', 1)).where('OR', where('c', false))
         let sqlString = query.sql()
         let values = query.values()
-        expect(sqlString).to.equal('SELECT * FROM table WHERE (a = ? XOR b = ?) OR (c = ?);')
+        expect(sqlString).to.equal('SELECT * FROM table WHERE (a = ? XOR b = ?) OR c = ?;')
         expect(values).to.deep.equal(['a', 1, false])
       })
 
