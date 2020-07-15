@@ -625,7 +625,8 @@ export class Where {
         let indexOfParameter: number = 0
 
         while ((indexOfParameter = expression.indexOf('$', indexOfParameter)) > -1) {
-          if (indexOfParameter + 1 < expression.length && expression[indexOfParameter + 1] != ' ') {
+          // check if there is a character after the $ and check if that is not already a number
+          if (indexOfParameter + 1 < expression.length && ! Number.isNaN(parseInt(expression[indexOfParameter + 1]))) {
             indexOfParameter++
             continue
           }

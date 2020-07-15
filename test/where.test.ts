@@ -35,7 +35,15 @@ describe('Where', function() {
         let values = where.values()
         expect(sql).to.equal('a > \'aValue\' OR b = ? XOR c = ?')
         expect(values).to.deep.equal([ 1, false ])
-      })  
+      })
+
+      it('should render an expression containing a sub select', function() {
+        let where = new Where('a IN (SELECT b FROM c WHERE d = ?)', [ 1 ])
+        let sql = where.sql()
+        let values = where.values()
+        expect(sql).to.equal('a IN (SELECT b FROM c WHERE d = ?)')
+        expect(values).to.deep.equal([ 1 ])
+      })
     })
 
     describe('PostgreSql', function() {
@@ -69,7 +77,15 @@ describe('Where', function() {
         let values = where.values()
         expect(sql).to.equal('a > \'aValue\' OR b = $1 XOR c = $2')
         expect(values).to.deep.equal([ 1, false ])
-      })  
+      })
+      
+      it.only('should render an expression containing a sub select', function() {
+        let where = new Where('a IN (SELECT b FROM c WHERE d = $)', [ 1 ])
+        let sql = where.sql('postgres')
+        let values = where.values()
+        expect(sql).to.equal('a IN (SELECT b FROM c WHERE d = $1)')
+        expect(values).to.deep.equal([ 1 ])
+      })
     })
   })
 
@@ -621,7 +637,7 @@ describe('Where', function() {
     })
   })
 
-  describe('In', function() {
+  describe('IN', function() {
     describe('MySQL', function() {
       it('should render an IN predicate from column, IN and array', function() {
         let where = new Where('a', 'IN', [1, 2, 3, 4])
