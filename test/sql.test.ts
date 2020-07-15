@@ -67,6 +67,32 @@ describe('sql', function() {
         expect(sqlString).to.equal('DELETE table1 FROM table2;')
       })
     })
+
+    describe('USING', function() {
+      it('should accept arbitrary many using statements', function() {
+        let query = sql.deleteFrom('table1').using('table2', 'table3')
+        let sqlString = query.sql()
+        expect(sqlString).to.equal('DELETE FROM table1 USING table2, table3;')
+      })
+
+      it('should accept a statement containing comma separated using statements', function() {
+        let query = sql.deleteFrom('table1').using('table2,       table3')
+        let sqlString = query.sql()
+        expect(sqlString).to.equal('DELETE FROM table1 USING table2, table3;')
+      })
+
+      it('should accept a mix of statements containing either one or comma separated using statements', function() {
+        let query = sql.deleteFrom('table1').using('table2', 'table3,     table4', 'table5')
+        let sqlString = query.sql()
+        expect(sqlString).to.equal('DELETE FROM table1 USING table2, table3, table4, table5;')
+      })
+
+      it('should eliminate duplicates', function() {
+        let query = sql.deleteFrom('table1').using('table2', 'table3,     table2', 'table2')
+        let sqlString = query.sql()
+        expect(sqlString).to.equal('DELETE FROM table1 USING table2, table3;')
+      })
+    })
   })
 
   describe('PostgreSQL', function() {
@@ -123,6 +149,32 @@ describe('sql', function() {
         let query = sql.delete_('table1').from('table2')
         let sqlString = query.sql('postgres')
         expect(sqlString).to.equal('DELETE table1 FROM table2;')
+      })
+    })
+
+    describe('USING', function() {
+      it('should accept arbitrary many using statements', function() {
+        let query = sql.deleteFrom('table1').using('table2', 'table3')
+        let sqlString = query.sql('postgres')
+        expect(sqlString).to.equal('DELETE FROM table1 USING table2, table3;')
+      })
+
+      it('should accept a statement containing comma separated using statements', function() {
+        let query = sql.deleteFrom('table1').using('table2,       table3')
+        let sqlString = query.sql('postgres')
+        expect(sqlString).to.equal('DELETE FROM table1 USING table2, table3;')
+      })
+
+      it('should accept a mix of statements containing either one or comma separated using statements', function() {
+        let query = sql.deleteFrom('table1').using('table2', 'table3,     table4', 'table5')
+        let sqlString = query.sql('postgres')
+        expect(sqlString).to.equal('DELETE FROM table1 USING table2, table3, table4, table5;')
+      })
+
+      it('should eliminate duplicates', function() {
+        let query = sql.deleteFrom('table1').using('table2', 'table3,     table2', 'table2')
+        let sqlString = query.sql('postgres')
+        expect(sqlString).to.equal('DELETE FROM table1 USING table2, table3;')
       })
     })
   })

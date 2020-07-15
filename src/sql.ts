@@ -42,6 +42,7 @@ export class Query {
   private _delete?: string
   private _froms: string[] = []
   private _joins: Join[] = []
+  private _usings: string[] = []
   private _wheres: Where[] = []
   private _orderBys: OrderBy[] = []
   private _limit?: number
@@ -84,6 +85,35 @@ export class Query {
 
   join(typeOrTable: string, tableOrOn: string, on?: string): Query {
     this._joins.push(new Join(typeOrTable, tableOrOn, on as any))
+    return this
+  }
+
+  /**
+   * A USING statement like this: DELETE FROM A USING B, C
+    * Supported in PostgreSQL 9.1+ (https://stackoverflow.com/questions/11753904/postgresql-delete-with-inner-join)
+   */
+  using(...usings: string[]): Query {
+    for (let using of usings) {
+      if (using.indexOf(',')) {
+        let splits = using.split(',')
+
+        for (let split of splits) {
+          let trimmed = split.trim()
+
+          if (this._usings.indexOf(trimmed) == -1) {
+            this._usings.push(trimmed)
+          }
+        }
+      }
+      else {
+        let trimmed = using.trim()
+
+        if (this._usings.indexOf(trimmed) == -1) {
+          this._usings.push(trimmed)
+        }
+      }
+    }
+    
     return this
   }
 
@@ -176,6 +206,11 @@ export class Query {
         sql += from
         firstFrom = false
       }
+    }
+
+    if (this._usings.length > 0) {
+      let usings = this._usings.join(', ')
+      sql += ' USING ' + usings
     }
 
     for (let join of this._joins) {
