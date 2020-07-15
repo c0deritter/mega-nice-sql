@@ -20,9 +20,15 @@ export default class {
     return query
   }
 
-  static deleteFrom(deleteFrom: string): Query {
+  static delete_(delete_?: string) {
     let query = new Query()
-    query.deleteFrom(deleteFrom)
+    query.delete_(delete_)
+    return query
+  }
+
+  static deleteFrom(from: string): Query {
+    let query = new Query()
+    query.deleteFrom(from)
     return query
   }
 }
@@ -33,7 +39,7 @@ export class Query {
   private _insertInto?: string
   private _values: Value[] = []
   private _update?: string
-  private _deleteFrom?: string
+  private _delete?: string
   private _froms: string[] = []
   private _joins: Join[] = []
   private _wheres: Where[] = []
@@ -57,8 +63,14 @@ export class Query {
     return this
   }
 
-  deleteFrom(deleteFrom: string): Query {
-    this._deleteFrom = deleteFrom
+  delete_(delete_?: string): Query {
+    this._delete = delete_ == undefined ? '' : delete_
+    return this
+  }
+
+  deleteFrom(from: string): Query {
+    this._delete = ''
+    this._froms.push(from)
     return this
   }
 
@@ -148,8 +160,8 @@ export class Query {
       sql += 'UPDATE ' + this._update
     }
 
-    if (this._deleteFrom != undefined) {
-      sql += 'DELETE FROM ' + this._deleteFrom
+    if (this._delete != undefined) {
+      sql += 'DELETE' + (this._delete.length > 0 ? ' ' + this._delete : '')
     }
 
     if (this._froms.length > 0) {

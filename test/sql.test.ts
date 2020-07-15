@@ -47,6 +47,26 @@ describe('sql', function() {
         expect(sqlString).to.equal('SELECT * FROM table;')
       })
     })
+
+    describe('DELETE FROM', function() {
+      it('should create a DELETE FROM with the fine grained methods', function() {
+        let query = sql.delete_().from('table')
+        let sqlString = query.sql()
+        expect(sqlString).to.equal('DELETE FROM table;')
+      })
+
+      it('should create a DELETE FROM with the shortcut method', function() {
+        let query = sql.deleteFrom('table')
+        let sqlString = query.sql()
+        expect(sqlString).to.equal('DELETE FROM table;')
+      })
+
+      it('should create a DELETE table FROM', function() {
+        let query = sql.delete_('table1').from('table2')
+        let sqlString = query.sql()
+        expect(sqlString).to.equal('DELETE table1 FROM table2;')
+      })
+    })
   })
 
   describe('PostgreSQL', function() {
@@ -83,6 +103,26 @@ describe('sql', function() {
         let query = sql.select('*').from('table')
         let sqlString = query.sql('postgres')
         expect(sqlString).to.equal('SELECT * FROM table;')
+      })
+    })
+
+    describe('DELETE FROM', function() {
+      it('should create a DELETE FROM with the fine grained methods', function() {
+        let query = sql.delete_().from('table')
+        let sqlString = query.sql('postgres')
+        expect(sqlString).to.equal('DELETE FROM table;')
+      })
+
+      it('should create a DELETE FROM with the shortcut method', function() {
+        let query = sql.deleteFrom('table')
+        let sqlString = query.sql('postgres')
+        expect(sqlString).to.equal('DELETE FROM table;')
+      })
+
+      it('should create a DELETE table FROM', function() {
+        let query = sql.delete_('table1').from('table2')
+        let sqlString = query.sql('postgres')
+        expect(sqlString).to.equal('DELETE table1 FROM table2;')
       })
     })
   })
