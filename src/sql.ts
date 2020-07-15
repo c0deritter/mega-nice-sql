@@ -67,8 +67,11 @@ export class Query {
     return this
   }
 
+  join(type: string, table: string, on: string): Query
+  join(table: string, on: string): Query
+
   join(typeOrTable: string, tableOrOn: string, on?: string): Query {
-    this._joins.push(new Join(typeOrTable, tableOrOn, on))
+    this._joins.push(new Join(typeOrTable, tableOrOn, on as any))
     return this
   }
 
@@ -302,6 +305,9 @@ export class Join {
   type: string = ''
   table: string
   on?: string
+
+  constructor(type: string, table: string, on: string)
+  constructor(table: string, on: string)
 
   constructor(typeOrTable: string, tableOrOn: string, on?: string) {
     let upperCase = typeOrTable.trim().toUpperCase()
