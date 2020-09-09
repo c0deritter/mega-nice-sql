@@ -79,7 +79,7 @@ describe('Where', function() {
         expect(values).to.deep.equal([ 1, false ])
       })
       
-      it.only('should render an expression containing a sub select', function() {
+      it('should render an expression containing a sub select', function() {
         let where = new Where('a IN (SELECT b FROM c WHERE d = $)', [ 1 ])
         let sql = where.sql('postgres')
         let values = where.values()

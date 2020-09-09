@@ -372,7 +372,7 @@ export class Join {
   }
 
   sql(): string {
-    return this.type + ' JOIN ' + this.table + ' ON ' + this.on
+    return (this.type.length > 0 ? this.type + ' ' : '') + 'JOIN ' + this.table + ' ON ' + this.on
   }
 }
 
