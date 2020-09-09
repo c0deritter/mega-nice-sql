@@ -164,6 +164,18 @@ export class Query {
     return this
   }
 
+  postgres(): string {
+    return this.sql('postgres')
+  }
+
+  mysql(): string {
+    return this.sql('mysql')
+  }
+
+  maria(): string {
+    return this.sql('mysql')
+  }
+
   sql(db: string = 'mysql'): string {
     let sql = ''
     let parameterIndex = 1
@@ -970,7 +982,7 @@ export class OrderBy {
 }
 
 function getParameterQueryString(db: string, parameterIndex: number = 1): string {
-  if (db == 'mysql' || db == 'mariadb') {
+  if (db == 'mysql' || db == 'maria') {
     return '?'
   }
   
