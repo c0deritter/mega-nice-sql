@@ -35,19 +35,19 @@ export default class {
 
 export class Query {
 
-  private _selects: string[] = []
-  private _insertInto?: string
-  private _values: Value[] = []
-  private _update?: string
-  private _delete?: string
-  private _froms: string[] = []
-  private _joins: Join[] = []
-  private _usings: string[] = []
-  private _wheres: Where[] = []
-  private _orderBys: OrderBy[] = []
-  private _limit?: number
-  private _offset?: number
-  private _returnings: string[] = []
+  _selects: string[] = []
+  _insertInto?: string
+  _values: Value[] = []
+  _update?: string
+  _delete?: string
+  _froms: From[] = []
+  _joins: Join[] = []
+  _usings: string[] = []
+  _wheres: Where[] = []
+  _orderBys: OrderBy[] = []
+  _limit?: number
+  _offset?: number
+  _returnings: string[] = []
 
   select(select: string): Query {
     this._selects.push(select)
@@ -69,14 +69,17 @@ export class Query {
     return this
   }
 
-  deleteFrom(from: string): Query {
+  deleteFrom(expressionOrTable: string, alias?: string): Query {
     this._delete = ''
-    this._froms.push(from)
+    this._froms.push(new From(expressionOrTable, alias))
     return this
   }
 
-  from(from: string): Query {
-    this._froms.push(from)
+  from(expression: string): Query
+  from(table: string, alias?: string): Query
+
+  from(expressionOrTable: string, alias?: string): Query {
+    this._froms.push(new From(expressionOrTable, alias))
     return this
   }
 
@@ -176,7 +179,7 @@ export class Query {
     return this.sql('mysql')
   }
 
-  sql(db: string = 'mysql'): string {
+  sql(db: string): string {
     let sql = ''
     let parameterIndex = 1
 
@@ -215,7 +218,7 @@ export class Query {
           sql += ', '
         }
 
-        sql += from
+        sql += from.sql()
         firstFrom = false
       }
     }
@@ -276,6 +279,14 @@ export class Query {
       }
     }
 
+    // we determine if there is exactly one From because if there is
+    // we want to prepend the alias to every column name
+    let onlyFrom: From|undefined = undefined
+
+    if (this._froms.length == 1) {
+      onlyFrom = this._froms[0]
+    }
+
     if (this._wheres.length > 0) {
       sql += ' WHERE '
 
@@ -285,7 +296,11 @@ export class Query {
           sql += ' ' + where.logical + ' '
         }
 
-        let whereResult = <{ sql: string, parameterIndex: number }> where.sql(db, parameterIndex)
+        let whereResult = <{ sql: string, parameterIndex: number }> where.sql(db, {
+          alias: onlyFrom != undefined ? onlyFrom.alias : undefined,
+          parameterIndex: parameterIndex
+        })
+
         parameterIndex = whereResult.parameterIndex
         sql += whereResult.sql
         firstWhere = false
@@ -360,31 +375,86 @@ export class Query {
   }
 }
 
-export class Join {
-  type: string = ''
-  table: string
-  on?: string
+export class From {
 
-  constructor(type: string, table: string, on: string)
-  constructor(table: string, on: string)
+  private static readonly regex = /(\w+)\s+(AS)?\s?(\w+)/i
 
-  constructor(typeOrTable: string, tableOrOn: string, on?: string) {
-    let upperCase = typeOrTable.trim().toUpperCase()
+  table!: string
+  alias?: string
 
-    if (upperCase.startsWith('INNER') || upperCase.startsWith('LEFT') || 
-        upperCase.startsWith('RIGHT') || upperCase.startsWith('FULL')) {
-      this.type = upperCase
-      this.table = tableOrOn
-      this.on = on
+  constructor(expression: string)
+  constructor(table: string, alias?: string)
+
+  constructor(expressionOrTable: string, alias?: string) {
+    if (expressionOrTable.indexOf(' ') == -1) {
+      this.table = expressionOrTable
+      this.alias = alias
     }
     else {
-      this.table = typeOrTable
-      this.on = tableOrOn
+      let result = From.regex.exec(expressionOrTable)
+
+      if (result != undefined) {
+        this.table = result[1]
+        this.alias = result[3]
+      }
+      else {
+        throw new Error('Given expression did not match the expected syntax: ' + expressionOrTable)
+      }
     }
   }
 
   sql(): string {
-    return (this.type.length > 0 ? this.type + ' ' : '') + 'JOIN ' + this.table + ' ON ' + this.on
+    return this.table + (this.alias != undefined && this.alias.length > 0 ? ' ' + this.alias : '')
+  }
+}
+
+export class Join {
+
+  type?: string
+  table: string
+  alias?: string
+  on?: string
+
+  constructor(type: string, table: string, on: string)
+  constructor(type: string, table: string, alias: string, on: string)
+  constructor(table: string, on: string)
+  constructor(table: string, alias: string, on: string)
+
+  constructor(typeOrTable: string, tableOrOnOrAlias: string, onOrAlias?: string, on?: string) {
+    let upperCase = typeOrTable.toUpperCase()
+
+    if (upperCase.startsWith('INNER') || upperCase.startsWith('LEFT') || 
+        upperCase.startsWith('RIGHT') || upperCase.startsWith('FULL')) {
+      this.type = upperCase
+      this.table = tableOrOnOrAlias
+
+      if (onOrAlias != undefined && on == undefined) {
+        this.on = onOrAlias
+      }
+      else if (onOrAlias != undefined && on != undefined) {
+        this.alias = onOrAlias
+        this.on = on
+      }
+    }
+    else {
+      this.table = typeOrTable
+
+      if (onOrAlias == undefined) {
+        this.on = tableOrOnOrAlias
+      }
+      else {
+        this.alias = tableOrOnOrAlias
+        this.on = onOrAlias
+      }
+    }
+  }
+
+  sql(): string {
+    return (this.type != undefined && this.type.length > 0 ? this.type + ' ' : '') +
+      'JOIN ' +
+      this.table +
+      (this.alias != undefined && this.alias.length > 0 ? ' ' + this.alias : '') +
+      ' ON ' + this.on
   }
 }
 
@@ -579,19 +649,24 @@ export class Where {
     }
   }
 
-  sql(db: string = 'mysql', parameterIndex?: number): string | { sql: string, parameterIndex: number } {
-    let index
-    if (parameterIndex == undefined) {
-      index = 1
+  sql(db: string, options?: { alias?: string, parameterIndex?: number }): string | { sql: string, parameterIndex: number } {
+    let parameterIndex
+    let alias = options != undefined ? options.alias : undefined
+
+    if (options != undefined && options.parameterIndex != undefined) {
+      parameterIndex = options.parameterIndex
     }
     else {
-      index = parameterIndex
+      parameterIndex = 1
     }
 
     if (this.predicate) {
-      let result = <{ sql: string, parameterIndex: number }> this.predicate.sql(db, index)
+      let result = <{ sql: string, parameterIndex: number }> this.predicate.sql(db, {
+        alias: alias,
+        parameterIndex: parameterIndex
+      })
 
-      if (parameterIndex == undefined) {
+      if (options == undefined || options.parameterIndex == undefined) {
         return result.sql
       }
       else {
@@ -611,7 +686,7 @@ export class Where {
           sql += ' ' + where.logical + ' '
         }
 
-        let result = <{ sql: string, parameterIndex: number }> where.sql(db, index)
+        let result = <{ sql: string, parameterIndex: number }> where.sql(db, { alias: alias, parameterIndex: parameterIndex })
         sql += result.sql
         firstWhere = false
       }
@@ -620,13 +695,13 @@ export class Where {
         sql += ')'
       }
 
-      if (parameterIndex == undefined) {
+      if (options == undefined || options.parameterIndex == undefined) {
         return sql
       }
       else {
         return {
           sql: sql,
-          parameterIndex: index
+          parameterIndex: parameterIndex
         }
       }  
     }
@@ -643,19 +718,19 @@ export class Where {
             continue
           }
 
-          expression = expression.substr(0, indexOfParameter + 1) + index + expression.substr(indexOfParameter + 1)
-          index++
+          expression = expression.substr(0, indexOfParameter + 1) + parameterIndex + expression.substr(indexOfParameter + 1)
+          parameterIndex++
           indexOfParameter++
         }
       }
 
-      if (parameterIndex == undefined) {
+      if (options == undefined || options.parameterIndex == undefined) {
         return expression
       }
       else {
         return {
           sql: expression,
-          parameterIndex: index
+          parameterIndex: parameterIndex
         }
       }
     }
@@ -682,12 +757,12 @@ export class Where {
   }
 }
 
-abstract class Predicate {
-  abstract sql(db: string, parameterIndex?: number): string | { sql: string, parameterIndex: number }
+export abstract class Predicate {
+  abstract sql(db: string, options: { alias?: string, parameterIndex?: number }): string | { sql: string, parameterIndex: number }
   abstract values(): any[]
 }
 
-class Comparison extends Predicate {
+export class Comparison extends Predicate {
 
   private static readonly regex = /(\w+)\s+(=|<>|!=|>|>=|<|<=)\s+(')?([^']+)(')?/
   private static readonly regexFromOperatorOn = /(=|<>|!=|>|>=|<|<=)\s+(')?([^']+)(')?/
@@ -704,14 +779,16 @@ class Comparison extends Predicate {
     this.value = value
   }
 
-  sql(db: string, parameterIndex?: number): string | { sql: string, parameterIndex: number } {
-    if (parameterIndex == undefined) {
+  sql(db: string, options: { alias?: string, parameterIndex?: number }): string | { sql: string, parameterIndex: number } {
+    if (options == undefined || options.parameterIndex == undefined) {
       return this.column + ' ' + this.operator + ' ' + getParameterQueryString(db, 1)
     }
     else {
       return {
-        sql: this.column + ' ' + this.operator + ' ' + getParameterQueryString(db, parameterIndex),
-        parameterIndex: ++parameterIndex // ++ in front increases first and then assigns
+        sql:
+          (options != undefined && options.alias != undefined && options.alias.length > 0 ? options.alias + '.' : '') +
+          this.column + ' ' + this.operator + ' ' + getParameterQueryString(db, options.parameterIndex),
+        parameterIndex: ++options.parameterIndex // ++ in front increases first and then assigns
       }
     }
   }
@@ -772,7 +849,7 @@ class Comparison extends Predicate {
   }
 }
 
-class In extends Predicate {
+export class In extends Predicate {
 
   private static readonly regex = /(\w+)\s+IN\s+\(([^\)]*)\)/i
   private static readonly regexFromOperatorOn = /IN\s+\(([^\)]*)\)/i
@@ -787,16 +864,18 @@ class In extends Predicate {
     this.valuesArray = values
   }
 
-  sql(db: string, parameterIndex?: number): string | { sql: string, parameterIndex: number } {
-    let index
-    if (parameterIndex == undefined) {
-      index = 1
+  sql(db: string, options: { alias?: string, parameterIndex?: number }): string | { sql: string, parameterIndex: number } {
+    let alias = options != undefined && options.alias != undefined && options.alias.length > 0 ? options.alias + '.' : ''
+
+    let parameterIndex
+    if (options == undefined || options.parameterIndex == undefined) {
+      parameterIndex = 1
     }
     else {
-      index = parameterIndex
+      parameterIndex = options.parameterIndex
     }
 
-    let sql = this.column + ' IN ('
+    let sql = alias + this.column + ' IN ('
 
     if (this.valuesArray instanceof Array) {
       for (let i = 0; i < this.valuesArray.length; i++) {
@@ -804,20 +883,20 @@ class In extends Predicate {
           sql += ', '
         }
 
-        sql += getParameterQueryString(db, index)
-        index++
+        sql += getParameterQueryString(db, parameterIndex)
+        parameterIndex++
       }
     }
 
     sql += ')'
 
-    if (parameterIndex == undefined) {
+    if (options == undefined || options.parameterIndex == undefined) {
       return sql
     }
     else {
       return {
         sql: sql,
-        parameterIndex: index
+        parameterIndex: parameterIndex
       }
     }
   }
@@ -886,7 +965,7 @@ class In extends Predicate {
   }
 }
 
-class Null extends Predicate {
+export class Null extends Predicate {
 
   private static readonly regex = /(\w+)\s+IS\s+(NOT(?:\s+))?NULL/i
   private static readonly regexFromOperatorOn = /IS\s+(NOT(?:\s+))?NULL/i
@@ -901,14 +980,16 @@ class Null extends Predicate {
     this.not = not
   }
 
-  sql(db: string, parameterIndex?: number): string | { sql: string, parameterIndex: number } {
-    if (parameterIndex == undefined) {
-      return this.column + (this.not ? ' IS NOT NULL' : ' IS NULL')
+  sql(db: string, options?: { alias?: string, parameterIndex?: number }): string | { sql: string, parameterIndex: number } {
+    let alias = options != undefined && options.alias != undefined && options.alias.length > 0 ? options.alias + '.' : ''
+
+    if (options == undefined || options.parameterIndex == undefined) {
+      return alias + this.column + (this.not ? ' IS NOT NULL' : ' IS NULL')
     }
     else {
       return {
-        sql: this.column + (this.not ? ' IS NOT NULL' : ' IS NULL'),
-        parameterIndex: parameterIndex
+        sql: alias + this.column + (this.not ? ' IS NOT NULL' : ' IS NULL'),
+        parameterIndex: options.parameterIndex
       }
     }
   }
