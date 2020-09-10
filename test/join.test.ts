@@ -2,12 +2,13 @@ import { expect } from 'chai'
 import 'mocha'
 import { Join } from '../src/sql'
 
-describe('Join', function() {
+describe.only('Join', function() {
   describe('constructor', function() {
     it('should initialize with type, table and on', function() {
       let join = new Join('INNER', 'table', 'id = table.id')
       expect(join.type).to.equal('INNER')
       expect(join.table).to.equal('table')
+      expect(join.alias).to.be.undefined
       expect(join.on).to.equal('id = table.id')
     })
 
@@ -23,6 +24,7 @@ describe('Join', function() {
       let join = new Join('table', 'id = table.id')
       expect(join.type).to.be.undefined
       expect(join.table).to.equal('table')
+      expect(join.alias).to.be.undefined
       expect(join.on).to.equal('id = table.id')
     })
 
