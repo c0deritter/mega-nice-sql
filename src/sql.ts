@@ -84,7 +84,9 @@ export class Query {
   }
 
   join(type: string, table: string, on: string): Query
+  join(type: string, table: string, alias: string, on: string): Query
   join(table: string, on: string): Query
+  join(table: string, alias: string, on: string): Query
 
   join(typeOrTable: string, tableOrOn: string, on?: string): Query {
     this._joins.push(new Join(typeOrTable, tableOrOn, on as any))
