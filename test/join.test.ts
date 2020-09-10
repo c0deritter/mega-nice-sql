@@ -2,7 +2,7 @@ import { expect } from 'chai'
 import 'mocha'
 import { Join } from '../src/sql'
 
-describe.only('Join', function() {
+describe('Join', function() {
   describe('constructor', function() {
     it('should initialize with type, table and on', function() {
       let join = new Join('INNER', 'table', 'id = table.id')
