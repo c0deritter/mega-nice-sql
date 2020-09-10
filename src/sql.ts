@@ -35,6 +35,8 @@ export default class {
 
 export class Query {
 
+  private static readonly asRegex = /(\w+)\s+(AS)?\s?(\w+)/i
+
   _selects: string[] = []
   _insertInto?: string
   _values: Value[] = []
@@ -49,8 +51,34 @@ export class Query {
   _offset?: number
   _returnings: string[] = []
 
-  select(select: string): Query {
-    this._selects.push(select)
+  select(expression: string): Query
+  select(column: string, alias?: string): Query
+
+  select(expressionOrColumn: string, alias?: string): Query {
+    expressionOrColumn = expressionOrColumn.trim()
+
+    if (expressionOrColumn.indexOf(' ') == -1) {
+      if (alias == undefined || alias.length == 0) {
+        this._selects.push(expressionOrColumn)
+      }
+      else {
+        this._selects.push(expressionOrColumn + ' ' + alias)
+      }
+    }
+    else {
+      let result = Query.asRegex.exec(expressionOrColumn)
+
+      if (result != undefined) {
+        let table = result[1]
+        let alias = result[3]
+
+        this._selects.push(table + ' ' + alias)
+      }
+      else {
+        throw new Error('Given expression did not match the expected syntax: ' + expressionOrColumn)
+      }      
+    }
+
     return this
   }
 
