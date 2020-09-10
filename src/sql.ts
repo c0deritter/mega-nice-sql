@@ -346,7 +346,13 @@ export class Query {
           sql += ', '
         }
 
-        sql += orderBy.sql()
+        let orderByResult = <{ sql: string, parameterIndex: number }> orderBy.sql(db, {
+          alias: onlyFrom != undefined ? onlyFrom.alias : undefined,
+          parameterIndex: parameterIndex
+        })
+        
+        parameterIndex = orderByResult.parameterIndex
+        sql += orderByResult.sql
         firstOrderBy = false
       }
     }
@@ -787,6 +793,7 @@ export class Where {
 }
 
 export abstract class Predicate {
+  alias?: string
   abstract sql(db: string, options: { alias?: string, parameterIndex?: number }): string | { sql: string, parameterIndex: number }
   abstract values(): any[]
 }
@@ -800,23 +807,47 @@ export class Comparison extends Predicate {
   operator: string
   value?: any
 
-  constructor(column: string, operator: string, value?: any) {
+  constructor(column: string, operator: string, value?: any)
+  constructor(alias: string, column: string, operator: string, value?: any)
+
+  constructor(aliasOrColumn: string, columnOrOperator: string, operatorOrValue?: any, value?: any) {
     super()
 
-    this.column = column
-    this.operator = operator
-    this.value = value
+    if (value === undefined) {
+      this.column = aliasOrColumn
+      this.operator = columnOrOperator
+      this.value = operatorOrValue
+    }
+    else {
+      this.alias = aliasOrColumn
+      this.column = columnOrOperator
+      this.operator = operatorOrValue
+      this.value = value
+    }
+
+    if (this.column.indexOf('.') > -1) {
+      let aliasAndColumn = this.column.split('.')
+      this.alias = aliasAndColumn[0]
+      this.column = aliasAndColumn[1]
+    }
   }
 
-  sql(db: string, options: { alias?: string, parameterIndex?: number }): string | { sql: string, parameterIndex: number } {
+  sql(db: string, options?: { alias?: string, parameterIndex?: number }): string | { sql: string, parameterIndex: number } {
+    let alias: string = ""
+
+    if (this.alias != undefined && this.alias.length > 0) {
+      alias = this.alias + '.'
+    }
+    else if (options != undefined && options.alias != undefined && options.alias.length > 0) {
+      alias = options.alias + '.'
+    }
+
     if (options == undefined || options.parameterIndex == undefined) {
-      return this.column + ' ' + this.operator + ' ' + getParameterQueryString(db, 1)
+      return alias + this.column + ' ' + this.operator + ' ' + getParameterQueryString(db, 1)
     }
     else {
       return {
-        sql:
-          (options != undefined && options.alias != undefined && options.alias.length > 0 ? options.alias + '.' : '') +
-          this.column + ' ' + this.operator + ' ' + getParameterQueryString(db, options.parameterIndex),
+        sql: alias + this.column + ' ' + this.operator + ' ' + getParameterQueryString(db, options.parameterIndex),
         parameterIndex: ++options.parameterIndex // ++ in front increases first and then assigns
       }
     }
@@ -886,15 +917,38 @@ export class In extends Predicate {
   column: string
   valuesArray: any[]
 
-  constructor(column: string, values: any[]) {
+  constructor(column: string, values: any[])
+  constructor(alias: string, column: string, values: any[])
+
+  constructor(aliasOrColumn: string, columnOrValues: string|any[], values?: any[]) {
     super()
 
-    this.column = column
-    this.valuesArray = values
+    if (values == undefined) {
+      this.column = aliasOrColumn
+      this.valuesArray = <any[]> columnOrValues
+    }
+    else {
+      this.alias = aliasOrColumn
+      this.column = <string> columnOrValues
+      this.valuesArray = values
+    }
+
+    if (this.column.indexOf('.') > -1) {
+      let aliasAndColumn = this.column.split('.')
+      this.alias = aliasAndColumn[0]
+      this.column = aliasAndColumn[1]
+    }
   }
 
-  sql(db: string, options: { alias?: string, parameterIndex?: number }): string | { sql: string, parameterIndex: number } {
-    let alias = options != undefined && options.alias != undefined && options.alias.length > 0 ? options.alias + '.' : ''
+  sql(db: string, options?: { alias?: string, parameterIndex?: number }): string | { sql: string, parameterIndex: number } {
+    let alias: string = ''
+
+    if (this.alias != undefined && this.alias.length > 0) {
+      alias = this.alias + '.'
+    }    
+    else if (options != undefined && options.alias != undefined && options.alias.length > 0) {
+      alias = options.alias + '.'
+    }
 
     let parameterIndex
     if (options == undefined || options.parameterIndex == undefined) {
@@ -1000,17 +1054,51 @@ export class Null extends Predicate {
   private static readonly regexFromOperatorOn = /IS\s+(NOT(?:\s+))?NULL/i
 
   column: string
-  not: boolean
+  not?: boolean
 
-  constructor(column: string, not: boolean = false) {
+  constructor(column: string)
+  constructor(column: string, not: boolean)
+  constructor(alias: string, column: string)
+  constructor(alias: string, column: string, not: boolean)
+
+  constructor(arg1: string, arg2?: string|boolean, arg3?: boolean) {
     super()
 
-    this.column = column
-    this.not = not
+    if (arg1 != undefined && arg2 == undefined && arg3 == undefined) {
+      this.column = arg1
+    }
+    else if (arg1 != undefined && arg2 != undefined && arg3 == undefined) {
+      if (typeof arg2 == 'boolean') {
+        this.column = arg1
+        this.not = arg2
+      }
+      else {
+        this.alias = arg1
+        this.column = arg2
+      }
+    }
+    else {
+      this.alias = arg1
+      this.column = <string> arg2
+      this.not = arg3!
+    }
+
+    if (this.column.indexOf('.') > -1) {
+      let aliasAndColumn = this.column.split('.')
+      this.alias = aliasAndColumn[0]
+      this.column = aliasAndColumn[1]
+    }
   }
 
   sql(db: string, options?: { alias?: string, parameterIndex?: number }): string | { sql: string, parameterIndex: number } {
-    let alias = options != undefined && options.alias != undefined && options.alias.length > 0 ? options.alias + '.' : ''
+    let alias: string = ''
+
+    if (this.alias != undefined && this.alias.length > 0) {
+      alias = this.alias + '.'
+    }    
+    else if (options != undefined && options.alias != undefined && options.alias.length > 0) {
+      alias = options.alias + '.'
+    }
 
     if (options == undefined || options.parameterIndex == undefined) {
       return alias + this.column + (this.not ? ' IS NOT NULL' : ' IS NULL')
@@ -1066,28 +1154,79 @@ export class Value {
 
 export class OrderBy {
 
+  alias?: string
   column: string
   direction?: string
 
-  constructor(column: string, direction?: string) {
-    this.column = column
-    this.direction = direction
-  }
+  constructor(column: string, direction?: string)
+  constructor(alias: string, column: string, direction?: string)
 
-  sql(): string {
-    if (this.direction != undefined) {
-      if (this.direction.toLowerCase() == 'asc') {
-        return this.column + ' ASC'
-      }
-      else if (this.direction.toLowerCase() == 'desc') {
-        return this.column + ' DESC'
+  constructor(arg1: string, arg2?: string, arg3?: string) {
+    if (arg1 != undefined && arg2 == undefined && arg3 == undefined) {
+      this.column = arg1
+    }
+    else if (arg1 != undefined && arg2 != undefined && arg3 == undefined) {
+      if (arg2.toUpperCase() == 'ASC' || arg2.toUpperCase() == 'DESC') {
+        this.column = arg1
+        this.direction = arg2
       }
       else {
-        return this.column + ' ' + this.direction
+        this.alias = arg1
+        this.column = arg2
       }
     }
+    else {
+      this.alias = arg1
+      this.column = arg2!
+      this.direction = arg3
+    }
 
-    return this.column
+    if (this.column.indexOf('.') > -1) {
+      let aliasAndColumn = this.column.split('.')
+      this.alias = aliasAndColumn[0]
+      this.column = aliasAndColumn[1]
+    }
+  }
+
+  sql(db: string, options?: { alias?: string, parameterIndex?: number }): string | { sql: string, parameterIndex: number } {
+    let alias: string = ''
+
+    if (this.alias != undefined && this.alias.length > 0) {
+      alias = this.alias + '.'
+    }    
+    else if (options != undefined && options.alias != undefined && options.alias.length > 0) {
+      alias = options.alias + '.'
+    }
+
+    let sql: string|undefined = undefined
+
+    if (this.direction != undefined) {
+      if (this.direction.toUpperCase() == 'ASC') {
+        sql = alias + this.column + ' ASC'
+      }
+      else if (this.direction.toUpperCase() == 'DESC') {
+        sql = alias + this.column + ' DESC'
+      }
+      else if (this.direction.length > 0) {
+        sql = alias + this.column + ' ' + this.direction
+      }
+      else {
+        sql = alias + this.column
+      }
+    }
+    else {
+      sql = alias + this.column
+    }
+
+    if (options == undefined || options.parameterIndex == undefined) {
+      return sql
+    }
+    else {
+      return {
+        sql: sql,
+        parameterIndex: options.parameterIndex
+      }
+    }
   }
 }
 
