@@ -505,7 +505,6 @@ export function where(...args: any[]): Where {
 
 export class Where {
 
-  mode: string = 'mysql'
   logical: string = 'AND' // AND or OR or XOR
   predicate?: Predicate
   wheres?: Where[]
