@@ -1,13 +1,12 @@
 {
-  "name": "mega-nice-sql",
-  "version": "2.2.0",
-  "description": "A mega nice data structure to work with SQL.",
+  "name": "knight-sql",
+  "version": "1.0.0",
+  "description": "A data structure to work with SQL.",
   "main": "lib/sql.js",
   "types": "lib/sql.d.ts",
   "files": [
     "lib/**/*"
   ],
-  "dependencies": {},
   "devDependencies": {
     "@types/chai": "^4.2.12",
     "@types/mocha": "^7.0.2",
@@ -22,7 +21,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/c0deritter/mega-nice-sql.git"
+    "url": "git+https://github.com/c0deritter/knight-sql.git"
   },
   "keywords": [
     ""
@@ -30,7 +29,7 @@
   "author": "Coderitter GmbH",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/c0deritter/mega-nice-sql/issues"
+    "url": "https://github.com/c0deritter/knight-sql/issues"
   },
-  "homepage": "https://github.com/c0deritter/mega-nice-sql#readme"
+  "homepage": "https://github.com/c0deritter/knight-sql#readme"
 }

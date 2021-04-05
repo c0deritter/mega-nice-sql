@@ -800,8 +800,8 @@ export abstract class Predicate {
 
 export class Comparison extends Predicate {
 
-  private static readonly regex = /(\w+)\s+(=|<>|!=|>|>=|<|<=)\s+(')?([^']+)(')?/
-  private static readonly regexFromOperatorOn = /(=|<>|!=|>|>=|<|<=)\s+(')?([^']+)(')?/
+  private static readonly regex = /(\w+)\s+(=|==|<>|!=|>|>=|<|<=)\s+(')?([^']+)(')?/
+  private static readonly regexFromOperatorOn = /(=|==|<>|!=|>|>=|<|<=)\s+(')?([^']+)(')?/
 
   column: string
   operator: string
