@@ -1,7 +1,7 @@
 {
   "name": "knight-sql",
   "version": "1.0.0",
-  "description": "A data structure to work with SQL.",
+  "description": "A data structure to work with SQL",
   "main": "lib/sql.js",
   "types": "lib/sql.d.ts",
   "files": [
