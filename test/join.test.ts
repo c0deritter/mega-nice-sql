@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import 'mocha'
-import { Join } from '../src/sql'
+import { Join } from '../src'
 
 describe('Join', function() {
   describe('constructor', function() {

@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import 'mocha'
-import sql, { where } from '../src/sql'
+import sql, { where } from '../src'
 
 describe('sql', function() {
   describe('MySql', function() {

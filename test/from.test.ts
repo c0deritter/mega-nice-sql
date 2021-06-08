@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import 'mocha'
-import { From } from '../src/sql'
+import { From } from '../src'
 
 describe('From', function() {
   describe('constructor', function() {

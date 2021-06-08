@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import 'mocha'
-import { Where } from '../src/sql'
+import { Where } from '../src'
 
 describe('Where', function() {
   describe('expression', function() {

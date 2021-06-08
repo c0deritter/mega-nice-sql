@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import 'mocha'
-import { OrderBy } from '../src/sql'
+import { OrderBy } from '../src'
 
 describe('OrderBy', function() {
   describe('constructor', function() {
